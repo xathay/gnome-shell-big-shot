@@ -1,0 +1,421 @@
+/**
+ * Big Shot — Main contextual toolbar
+ *
+ * Appears above the screenshot UI controls.
+ * Switches between Screenshot tools (annotation) and Screencast tools (audio/fps/resolution).
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import { PartUI } from './partbase.js';
+import { PALETTE } from '../drawing/colors.js';
+
+// Drawing modes mapped to icon names and labels
+const SCREENSHOT_TOOLS = [
+    { id: 'pen',       icon: 'big-shot-pen-symbolic',       label: () => _('Pen'),        key: '1' },
+    { id: 'arrow',     icon: 'big-shot-arrow-symbolic',     label: () => _('Arrow'),      key: '2' },
+    { id: 'line',      icon: 'big-shot-line-symbolic',      label: () => _('Line'),       key: '3' },
+    { id: 'rect',      icon: 'big-shot-rect-symbolic',      label: () => _('Rectangle'),  key: '4' },
+    { id: 'circle',    icon: 'big-shot-circle-symbolic',    label: () => _('Oval'),       key: '5' },
+    { id: 'text',      icon: 'big-shot-text-symbolic',      label: () => _('Text'),       key: '6' },
+    { id: 'highlight', icon: 'big-shot-highlight-symbolic', label: () => _('Highlighter'), key: '7' },
+    { id: 'censor',    icon: 'big-shot-censor-symbolic',    label: () => _('Censor'),     key: '8' },
+    { id: 'number',    icon: 'big-shot-number-symbolic',    label: () => _('Number'),     key: '9' },
+];
+
+const BEAUTIFY_TOOLS = [
+    { id: 'gradient', icon: 'big-shot-gradient-symbolic', label: () => _('Background') },
+    { id: 'crop',     icon: 'big-shot-crop-symbolic',     label: () => _('Crop') },
+    { id: 'padding',  icon: 'big-shot-padding-symbolic',  label: () => _('Padding') },
+];
+
+export class PartToolbar extends PartUI {
+    constructor(screenshotUI, extension) {
+        super(screenshotUI, extension);
+
+        this._activeTool = null;
+        this._toolButtons = new Map();
+
+        this._buildToolbar();
+    }
+
+    _buildToolbar() {
+        // Main container — positioned above the screenshot UI controls
+        this._container = new St.BoxLayout({
+            style_class: 'big-shot-toolbar',
+            vertical: false,
+            reactive: true,
+            can_focus: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.END,
+        });
+
+        // Screenshot tools section
+        this._screenshotTools = new St.BoxLayout({
+            style_class: 'big-shot-toolbar-section',
+            vertical: false,
+            visible: true,
+        });
+
+        // Annotation tools
+        for (const tool of SCREENSHOT_TOOLS) {
+            const btn = this._createToolButton(tool);
+            this._screenshotTools.add_child(btn);
+            this._toolButtons.set(tool.id, btn);
+        }
+
+        // Separator
+        const sep1 = new St.Widget({
+            style_class: 'big-shot-separator',
+            style: 'width: 1px; background: rgba(255,255,255,0.2); margin: 4px 6px;',
+        });
+        this._screenshotTools.add_child(sep1);
+
+        // Beautify tools (gradient, crop, padding)
+        for (const tool of BEAUTIFY_TOOLS) {
+            const btn = this._createToolButton(tool);
+            this._screenshotTools.add_child(btn);
+            this._toolButtons.set(tool.id, btn);
+        }
+
+        // Separator
+        const sep2 = new St.Widget({
+            style_class: 'big-shot-separator',
+            style: 'width: 1px; background: rgba(255,255,255,0.2); margin: 4px 6px;',
+        });
+        this._screenshotTools.add_child(sep2);
+
+        // Style controls (color + fill + size)
+        this._currentColorHex = '#ed333b';
+        this._fillColorHex = null; // null = no fill
+
+        this._colorButton = new St.Button({
+            style_class: 'big-shot-color-button',
+            style: 'background: #ed333b; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
+            can_focus: true,
+        });
+        this._colorButton.connect('clicked', () => this._showColorPopup('stroke'));
+        this._screenshotTools.add_child(this._colorButton);
+
+        // Fill color button (shows a smaller circle with inner marker)
+        this._fillButton = new St.Button({
+            style_class: 'big-shot-color-button',
+            style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
+                   'border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
+            can_focus: true,
+            child: new St.Icon({
+                icon_name: 'color-select-symbolic',
+                icon_size: 12,
+                style: 'color: rgba(255,255,255,0.6);',
+            }),
+        });
+        this._fillButton.connect('clicked', () => this._showColorPopup('fill'));
+        this._screenshotTools.add_child(this._fillButton);
+
+        this._sizeButton = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            child: new St.Label({ text: '3', y_align: Clutter.ActorAlign.CENTER }),
+            can_focus: true,
+        });
+        this._sizeButton.connect('clicked', () => this._cycleBrushSize());
+        this._screenshotTools.add_child(this._sizeButton);
+
+        // Undo/Redo buttons
+        this._undoButton = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            child: new St.Icon({
+                icon_name: 'edit-undo-symbolic',
+                icon_size: 16,
+            }),
+            can_focus: true,
+        });
+        this._undoButton.connect('clicked', () => this._onUndo());
+        this._screenshotTools.add_child(this._undoButton);
+
+        this._redoButton = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            child: new St.Icon({
+                icon_name: 'edit-redo-symbolic',
+                icon_size: 16,
+            }),
+            can_focus: true,
+        });
+        this._redoButton.connect('clicked', () => this._onRedo());
+        this._screenshotTools.add_child(this._redoButton);
+
+        this._container.add_child(this._screenshotTools);
+
+        // Add toolbar to the screenshotUI, above the bottom panel
+        // We insert it into the screenshot UI's layout
+        const uiGroup = this._ui;
+        if (uiGroup) {
+            uiGroup.add_child(this._container);
+            // Position it above the controls
+            this._container.set_style(
+                'position: fixed; margin-bottom: 80px; z-index: 100;'
+            );
+        }
+
+        // Initially hidden — shown when screenshot mode is active
+        this._container.visible = false;
+
+        // Listen for UI open/close
+        this._connectSignal(this._ui, 'notify::visible', () => {
+            this._onUIVisibilityChanged();
+        });
+    }
+
+    _createToolButton(tool) {
+        const btn = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button big-shot-tool-button',
+            toggle_mode: true,
+            can_focus: true,
+            child: new St.Icon({
+                icon_name: tool.icon,
+                icon_size: 16,
+            }),
+        });
+
+        btn._toolId = tool.id;
+        btn.set_accessible_name(tool.label());
+
+        btn.connect('clicked', () => this._onToolClicked(tool.id, btn));
+
+        return btn;
+    }
+
+    _onToolClicked(toolId, btn) {
+        // Toggle off other tools
+        for (const [id, otherBtn] of this._toolButtons) {
+            if (id !== toolId) {
+                otherBtn.checked = false;
+            }
+        }
+
+        if (btn.checked) {
+            this._activeTool = toolId;
+        } else {
+            this._activeTool = null;
+        }
+
+        // Notify the annotation overlay
+        this._ext._toolbar?._onToolChanged?.(this._activeTool);
+    }
+
+    _onToolChanged(toolId) {
+        // Can be overridden or connected externally
+    }
+
+    /**
+     * Programmatically select a tool by id (used by keyboard shortcuts).
+     * Pass null to deselect all → enters selection/move mode.
+     */
+    selectTool(toolId) {
+        if (toolId === null) {
+            // Deselect all
+            for (const [, btn] of this._toolButtons)
+                btn.checked = false;
+            this._activeTool = null;
+            this._onToolChanged(null);
+            return;
+        }
+
+        const btn = this._toolButtons.get(toolId);
+        if (!btn) return;
+
+        // Deselect others
+        for (const [id, otherBtn] of this._toolButtons) {
+            otherBtn.checked = (id === toolId);
+        }
+        this._activeTool = toolId;
+        this._onToolChanged(toolId);
+    }
+
+    get activeTool() {
+        return this._activeTool;
+    }
+
+    _cycleBrushSize() {
+        const sizes = [1, 2, 3, 5, 8, 12];
+        const current = parseInt(this._sizeButton.child.text) || 3;
+        const idx = sizes.indexOf(current);
+        const next = sizes[(idx + 1) % sizes.length];
+        this._sizeButton.child.text = String(next);
+    }
+
+    get brushSize() {
+        return parseInt(this._sizeButton.child.text) || 3;
+    }
+
+    _showColorPopup(target) {
+        // Remove existing popup
+        this._closeColorPopup();
+
+        this._colorPopup = new St.BoxLayout({
+            style_class: 'big-shot-color-popup',
+            style: 'background: rgba(30,30,30,0.95); border-radius: 8px; padding: 8px; ' +
+                   'border: 1px solid rgba(255,255,255,0.15);',
+            vertical: true,
+            reactive: true,
+        });
+
+        // Grid: 2 rows x 6 cols
+        for (let row = 0; row < 2; row++) {
+            const rowBox = new St.BoxLayout({ vertical: false });
+            for (let col = 0; col < 6; col++) {
+                const color = PALETTE[row * 6 + col];
+                const swatch = new St.Button({
+                    style: `background: ${color}; width: 24px; height: 24px; ` +
+                           'border-radius: 4px; margin: 2px;',
+                    reactive: true,
+                    can_focus: true,
+                });
+                swatch.connect('clicked', () => {
+                    this._applyColor(target, color);
+                    this._closeColorPopup();
+                });
+                rowBox.add_child(swatch);
+            }
+            this._colorPopup.add_child(rowBox);
+        }
+
+        // "No fill" button for fill target
+        if (target === 'fill') {
+            const noFillBtn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                label: _('No Fill'),
+                can_focus: true,
+                style: 'margin-top: 4px; font-size: 11px;',
+            });
+            noFillBtn.connect('clicked', () => {
+                this._applyColor('fill', null);
+                this._closeColorPopup();
+            });
+            this._colorPopup.add_child(noFillBtn);
+        }
+
+        // Position popup above the color button
+        const anchor = target === 'fill' ? this._fillButton : this._colorButton;
+        this._ui.add_child(this._colorPopup);
+
+        // Position near the button
+        const [bx, by] = anchor.get_transformed_position();
+        this._colorPopup.set_position(
+            bx - 40,
+            by - this._colorPopup.height - 8
+        );
+
+        // Close on click outside (after slight delay to avoid immediate close)
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this._colorPopupClickId = global.stage.connect('button-press-event', () => {
+                this._closeColorPopup();
+                return Clutter.EVENT_PROPAGATE;
+            });
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _applyColor(target, color) {
+        if (target === 'stroke') {
+            this._currentColorHex = color;
+            this._colorButton.set_style(
+                `background: ${color}; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;`
+            );
+        } else {
+            this._fillColorHex = color;
+            if (color) {
+                this._fillButton.set_style(
+                    `background: ${color}; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;`
+                );
+                this._fillButton.child.visible = false;
+            } else {
+                this._fillButton.set_style(
+                    'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
+                    'border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;'
+                );
+                this._fillButton.child.visible = true;
+            }
+        }
+    }
+
+    _closeColorPopup() {
+        if (this._colorPopupClickId) {
+            global.stage.disconnect(this._colorPopupClickId);
+            this._colorPopupClickId = null;
+        }
+        this._colorPopup?.destroy();
+        this._colorPopup = null;
+    }
+
+    get currentColor() {
+        return this._currentColorHex || '#ed333b';
+    }
+
+    get fillColor() {
+        return this._fillColorHex;
+    }
+
+    _onUndo() {
+        // Will be connected to drawing overlay
+    }
+
+    _onRedo() {
+        // Will be connected to drawing overlay
+    }
+
+    _onUIVisibilityChanged() {
+        if (this._ui.visible) {
+            // Show toolbar only in screenshot mode (not cast)
+            if (!this._isCastMode) {
+                this._animateIn();
+            }
+        } else {
+            this._animateOut();
+        }
+    }
+
+    _onModeChanged(isCast) {
+        super._onModeChanged(isCast);
+        if (isCast) {
+            this._animateOut();
+        } else if (this._ui.visible) {
+            this._animateIn();
+        }
+    }
+
+    _animateIn() {
+        this._container.visible = true;
+        this._container.opacity = 0;
+        this._container.translation_y = 20;
+        this._container.ease({
+            opacity: 255,
+            translation_y: 0,
+            duration: 200,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+    }
+
+    _animateOut() {
+        this._container.ease({
+            opacity: 0,
+            translation_y: 20,
+            duration: 150,
+            mode: Clutter.AnimationMode.EASE_IN_QUAD,
+            onComplete: () => {
+                this._container.visible = false;
+            },
+        });
+    }
+
+    destroy() {
+        this._closeColorPopup();
+        this._container?.destroy();
+        this._toolButtons.clear();
+        super.destroy();
+    }
+}

@@ -1,0 +1,19 @@
+# Build artifacts
+big-shot.zip
+*.zip
+
+# Development files
+PLAN.md
+build.sh
+update-pot.sh
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

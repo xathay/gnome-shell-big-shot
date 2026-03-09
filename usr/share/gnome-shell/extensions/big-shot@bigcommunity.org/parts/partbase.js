@@ -1,0 +1,149 @@
+/**
+ * Big Shot — Base classes for extension modules (Parts)
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
+
+// =============================================================================
+// PartBase — Simplest base class
+// =============================================================================
+
+export class PartBase {
+    constructor() {
+        this._destroyed = false;
+    }
+
+    destroy() {
+        this._destroyed = true;
+    }
+}
+
+// =============================================================================
+// PartUI — Base with ScreenshotUI awareness
+// =============================================================================
+
+export class PartUI extends PartBase {
+    constructor(screenshotUI, extension) {
+        super();
+        this._ui = screenshotUI;
+        this._ext = extension;
+        this._signals = [];
+        this._isCastMode = false;
+
+        // Monitor screenshot/screencast mode toggle
+        const shotBtn = this._ui._shotButton;
+        if (shotBtn) {
+            this._connectSignal(shotBtn, 'notify::checked', () => {
+                this._isCastMode = !shotBtn.checked;
+                this._onModeChanged(this._isCastMode);
+            });
+        }
+    }
+
+    _connectSignal(obj, signal, callback) {
+        const id = obj.connect(signal, callback);
+        this._signals.push({ obj, id });
+        return id;
+    }
+
+    _onModeChanged(_isCast) {
+        // Override in subclasses
+    }
+
+    destroy() {
+        for (const { obj, id } of this._signals) {
+            try {
+                obj.disconnect(id);
+            } catch {
+                // Already disconnected
+            }
+        }
+        this._signals = [];
+        super.destroy();
+    }
+}
+
+// =============================================================================
+// PartPopupSelect — Button with popup menu for value selection
+// =============================================================================
+
+export class PartPopupSelect extends PartUI {
+    constructor(screenshotUI, extension, options, defaultValue, labelFn) {
+        super(screenshotUI, extension);
+
+        this._options = options;
+        this._value = defaultValue;
+        this._labelFn = labelFn;
+
+        // Create the button
+        this._button = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            toggle_mode: false,
+            can_focus: true,
+            child: new St.Label({
+                text: this._labelFn(this._value),
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+        });
+
+        this._button.connect('clicked', () => this._showPopup());
+
+        // Create popup container
+        this._popup = new St.BoxLayout({
+            style_class: 'screenshot-ui-type-button-container',
+            vertical: true,
+            visible: false,
+            reactive: true,
+        });
+
+        this._popup.set_style('position: absolute; bottom: 40px; background: rgba(30,30,30,0.95); border-radius: 12px; padding: 4px;');
+
+        for (const opt of this._options) {
+            const item = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                label: this._labelFn(opt),
+                can_focus: true,
+            });
+            item.connect('clicked', () => {
+                this._value = opt;
+                this._button.child.text = this._labelFn(opt);
+                this._popup.visible = false;
+            });
+            this._popup.add_child(item);
+        }
+
+        // Add to the bottom area of the screenshot UI
+        const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
+        if (bottomGroup) {
+            bottomGroup.add_child(this._button);
+            bottomGroup.add_child(this._popup);
+        }
+
+        // Only visible in cast mode
+        this._button.visible = false;
+        this._popup.visible = false;
+    }
+
+    get value() {
+        return this._value;
+    }
+
+    _showPopup() {
+        this._popup.visible = !this._popup.visible;
+    }
+
+    _onModeChanged(isCast) {
+        this._button.visible = isCast;
+        if (!isCast) this._popup.visible = false;
+    }
+
+    destroy() {
+        this._popup?.destroy();
+        this._button?.destroy();
+        super.destroy();
+    }
+}
