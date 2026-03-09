@@ -100,3 +100,35 @@ msgstr ""
 #: parts/partaudio.js
 msgid "Record Microphone"
 msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Stroke Color"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Fill Color"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Brush Size"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Undo"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Redo"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Text…"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Annotation text"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Confirm"
+msgstr ""

@@ -46,3 +46,10 @@ export function rgbaToHex(rgba) {
     const b = Math.round(rgba[2] * 255).toString(16).padStart(2, '0');
     return `#${r}${g}${b}`;
 }
+
+/**
+ * Convert 0-1 float RGB to CSS rgb() string
+ */
+export function rgbToCSS(r, g, b) {
+    return `rgb(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)})`;
+}

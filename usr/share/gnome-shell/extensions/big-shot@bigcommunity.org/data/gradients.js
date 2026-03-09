@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+import Cairo from 'gi://cairo';
+
 /**
  * Each gradient has:
  *   name   — Display name
@@ -106,7 +108,7 @@ export function paintGradient(cr, gradient, x, y, w, h) {
     const x1 = cx + diag * Math.sin(rad);
     const y1 = cy + diag * Math.cos(rad);
 
-    const pat = new imports.cairo.LinearGradient(x0, y0, x1, y1);
+    const pat = new Cairo.LinearGradient(x0, y0, x1, y1);
     for (const [offset, r, g, b] of gradient.stops)
         pat.addColorStopRGBA(offset, r, g, b, 1.0);
 

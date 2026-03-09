@@ -77,3 +77,27 @@ msgstr "Desktop-Audio aufnehmen"
 
 msgid "Record Microphone"
 msgstr "Mikrofon aufnehmen"
+
+msgid "Stroke Color"
+msgstr "Strichfarbe"
+
+msgid "Fill Color"
+msgstr "Füllfarbe"
+
+msgid "Brush Size"
+msgstr "Pinselgröße"
+
+msgid "Undo"
+msgstr "Rückgängig"
+
+msgid "Redo"
+msgstr "Wiederherstellen"
+
+msgid "Text…"
+msgstr "Text…"
+
+msgid "Annotation text"
+msgstr "Anmerkungstext"
+
+msgid "Confirm"
+msgstr "Bestätigen"

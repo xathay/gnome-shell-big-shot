@@ -404,8 +404,7 @@ export class HighlighterAction extends StrokeAction {
         const coords = this.stroke.map(([x, y]) => toWidget(x, y));
 
         cr.save();
-        // Use MULTIPLY operator for highlight effect
-        // Cairo.Operator.MULTIPLY = 14
+        // Cairo.Operator.MULTIPLY = 14 (for highlight blending effect)
         cr.setOperator(14);
         cr.setSourceRGBA(...this.options.primaryColor);
         cr.setLineWidth(this.options.size * scale * 2);

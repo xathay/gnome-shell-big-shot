@@ -8,7 +8,6 @@
  */
 
 import GLib from 'gi://GLib';
-import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gvc from 'gi://Gvc';
@@ -117,11 +116,15 @@ export class PartAudio extends PartUI {
         this._micBtn.button.visible = false;
     }
 
-    _onMixerReady() {
+    _disconnectMixer() {
         if (this._mixerReadyId) {
-            this._mixer.disconnect(this._mixerReadyId);
+            this._mixer?.disconnect(this._mixerReadyId);
             this._mixerReadyId = null;
         }
+    }
+
+    _onMixerReady() {
+        this._disconnectMixer();
         this._updateDevices();
     }
 
@@ -160,18 +163,20 @@ export class PartAudio extends PartUI {
         if (!desktopActive && !micActive) return null;
 
         const audioCaps = 'audio/x-raw,channels=2,rate=48000';
+        // Escape device names to prevent pipeline injection
+        const dDev = desktopActive ? GLib.shell_quote(this._desktopDevice) : '';
+        const mDev = micActive ? GLib.shell_quote(this._micDevice) : '';
 
         if (desktopActive && micActive) {
-            // Mix both sources
-            return `audiomixer name=mix ! capsfilter caps=${audioCaps} ! audioconvert ! queue pulsesrc device="${this._desktopDevice}" ! capsfilter caps=${audioCaps} ! audioconvert ! queue ! mix. pulsesrc device="${this._micDevice}" ! capsfilter caps=${audioCaps} ! audioconvert ! queue ! mix.`;
+            return `audiomixer name=mix ! capsfilter caps=${audioCaps} ! audioconvert ! queue pulsesrc device=${dDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue ! mix. pulsesrc device=${mDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue ! mix.`;
         }
 
         if (desktopActive) {
-            return `pulsesrc device="${this._desktopDevice}" ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
+            return `pulsesrc device=${dDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
         }
 
         // micActive
-        return `pulsesrc device="${this._micDevice}" ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
+        return `pulsesrc device=${mDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
     }
 
     _onModeChanged(isCast) {
@@ -182,9 +187,7 @@ export class PartAudio extends PartUI {
     destroy() {
         this._desktopBtn?.destroy();
         this._micBtn?.destroy();
-        if (this._mixerReadyId) {
-            this._mixer?.disconnect(this._mixerReadyId);
-        }
+        this._disconnectMixer();
         this._mixer?.close();
         this._mixer = null;
         super.destroy();

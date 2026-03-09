@@ -213,6 +213,15 @@ To add a new language, copy `po/big-shot.pot` to `po/<LANG>.po` and translate al
 
 ---
 
+## Acknowledgments
+
+Big Shot was inspired by and based on the following projects:
+
+- **[Gradia](https://github.com/AlexanderVanhee/Gradia)** — Screenshot beautification tool for GNOME that inspired the gradient backgrounds, crop, padding, and drop-shadow features.
+- **[GNOME Shell Screencast Extra Feature](https://github.com/WSID/gnome-shell-screencast-extra-feature)** — GNOME Shell extension for enhanced screencast recording that served as the foundation for the audio capture, GPU pipeline detection, and screencast monkey-patching approach.
+
+---
+
 ## License
 
 [GPL-2.0-or-later](LICENSE) — Copyright © 2024 BigCommunity
