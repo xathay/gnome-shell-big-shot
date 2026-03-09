@@ -13,6 +13,7 @@ import Clutter from 'gi://Clutter';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { PartUI } from './partbase.js';
 import { GRADIENTS } from '../data/gradients.js';
+import { rgbToCSS } from '../drawing/colors.js';
 
 const ANGLE_VALUES = [0, 45, 90, 135, 180, 225, 270, 315];
 const RADIUS_VALUES = [0, 8, 16, 24, 32];
@@ -50,8 +51,8 @@ export class PartGradient extends PartUI {
             if (grad.stops.length >= 2) {
                 const [, r1, g1, b1] = grad.stops[0];
                 const [, r2, g2, b2] = grad.stops[grad.stops.length - 1];
-                const c1 = this._toCSS(r1, g1, b1);
-                const c2 = this._toCSS(r2, g2, b2);
+                const c1 = rgbToCSS(r1, g1, b1);
+                const c2 = rgbToCSS(r2, g2, b2);
                 swatch.set_style(
                     `background: linear-gradient(135deg, ${c1}, ${c2});`
                 );
@@ -108,13 +109,6 @@ export class PartGradient extends PartUI {
         // Add picker to screenshot UI
         if (this._ui)
             this._ui.add_child(this._picker);
-    }
-
-    _toCSS(r, g, b) {
-        const ri = Math.round(r * 255);
-        const gi = Math.round(g * 255);
-        const bi = Math.round(b * 255);
-        return `rgb(${ri}, ${gi}, ${bi})`;
     }
 
     _onSwatchClicked(index) {

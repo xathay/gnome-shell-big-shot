@@ -77,3 +77,27 @@ msgstr "Record Desktop Audio"
 
 msgid "Record Microphone"
 msgstr "Record Microphone"
+
+msgid "Stroke Color"
+msgstr "Stroke Color"
+
+msgid "Fill Color"
+msgstr "Fill Color"
+
+msgid "Brush Size"
+msgstr "Brush Size"
+
+msgid "Undo"
+msgstr "Undo"
+
+msgid "Redo"
+msgstr "Redo"
+
+msgid "Text…"
+msgstr "Text…"
+
+msgid "Annotation text"
+msgstr "Annotation text"
+
+msgid "Confirm"
+msgstr "Confirm"

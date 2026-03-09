@@ -14,6 +14,7 @@ import { PartUI } from './partbase.js';
 const PADDING_VALUES = [0, 16, 32, 48, 64];
 const HANDLE_SIZE = 10;
 const MIN_CROP = 32;
+const KEYBOARD_STEP = 8;
 
 // Handle positions: which edges they control
 const HANDLE_DEFS = [
@@ -58,12 +59,18 @@ export class PartCrop extends PartUI {
                 style: `width: ${HANDLE_SIZE}px; height: ${HANDLE_SIZE}px; ` +
                        'background: white; border: 1px solid #62a0ea; border-radius: 1px;',
                 reactive: true,
+                can_focus: true,
                 visible: false,
+                accessible_name: `Crop ${def.id}`,
             });
 
             handle.connect('button-press-event', (_actor, event) => {
                 this._onHandlePress(def, event);
                 return Clutter.EVENT_STOP;
+            });
+
+            handle.connect('key-press-event', (_actor, event) => {
+                return this._onHandleKeyPress(def, event);
             });
 
             this._handles.set(def.id, handle);
@@ -90,10 +97,10 @@ export class PartCrop extends PartUI {
             this._ui.add_child(this._paddingLabel);
 
             // Global motion and release for drag handling
-            this._globalMotionId = this._ui.connect('motion-event', (_actor, event) => {
+            this._connectSignal(this._ui, 'motion-event', (_actor, event) => {
                 return this._onGlobalMotion(event);
             });
-            this._globalReleaseId = this._ui.connect('button-release-event', (_actor, event) => {
+            this._connectSignal(this._ui, 'button-release-event', (_actor, event) => {
                 return this._onGlobalRelease(event);
             });
         }
@@ -156,6 +163,30 @@ export class PartCrop extends PartUI {
             startY: y,
             startRect: { ...this._cropRect },
         };
+    }
+
+    _onHandleKeyPress(def, event) {
+        if (!this._cropRect || !this._isActive) return Clutter.EVENT_PROPAGATE;
+
+        const sym = event.get_key_symbol();
+        let dx = 0, dy = 0;
+        if (sym === Clutter.KEY_Left) dx = -KEYBOARD_STEP;
+        else if (sym === Clutter.KEY_Right) dx = KEYBOARD_STEP;
+        else if (sym === Clutter.KEY_Up) dy = -KEYBOARD_STEP;
+        else if (sym === Clutter.KEY_Down) dy = KEYBOARD_STEP;
+        else return Clutter.EVENT_PROPAGATE;
+
+        const edges = def.edges;
+        let { x: rx, y: ry, width: rw, height: rh } = this._cropRect;
+
+        if (edges.includes('left')) { const nx = Math.max(0, Math.min(rx + dx, rx + rw - MIN_CROP)); rw -= nx - rx; rx = nx; }
+        if (edges.includes('right')) { rw = Math.max(MIN_CROP, Math.min(rw + dx, this._imageWidth - rx)); }
+        if (edges.includes('top')) { const ny = Math.max(0, Math.min(ry + dy, ry + rh - MIN_CROP)); rh -= ny - ry; ry = ny; }
+        if (edges.includes('bottom')) { rh = Math.max(MIN_CROP, Math.min(rh + dy, this._imageHeight - ry)); }
+
+        this._cropRect = { x: rx, y: ry, width: rw, height: rh };
+        this._updateOverlay();
+        return Clutter.EVENT_STOP;
     }
 
     _onGlobalMotion(event) {
@@ -247,14 +278,6 @@ export class PartCrop extends PartUI {
     }
 
     destroy() {
-        if (this._globalMotionId && this._ui) {
-            this._ui.disconnect(this._globalMotionId);
-            this._globalMotionId = null;
-        }
-        if (this._globalReleaseId && this._ui) {
-            this._ui.disconnect(this._globalReleaseId);
-            this._globalReleaseId = null;
-        }
         this._overlay?.destroy();
         this._paddingLabel?.destroy();
         for (const [, h] of this._handles) h.destroy();

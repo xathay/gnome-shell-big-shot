@@ -200,6 +200,8 @@ function fixFilePath(filePath, ext) {
     if (!filePath || !ext) return;
     const file = Gio.File.new_for_path(filePath);
     if (!file.query_exists(null)) return;
+    // Replace the last extension (e.g., .webm → .mkv). Works correctly for
+    // typical screencast filenames like 'Screencast_2024-01-01.webm'.
     const newPath = filePath.replace(/\.[^.]+$/, `.${ext}`);
     if (newPath !== filePath) {
         const newFile = Gio.File.new_for_path(newPath);
@@ -218,7 +220,7 @@ function fixFilePath(filePath, ext) {
 export default class BigShotExtension extends Extension {
     enable() {
         this._parts = [];
-        this._availableConfigs = [];
+        this._availableConfigs = null; // null = not yet detected (lazy)
         this._currentConfigIndex = 0;
 
         const screenshotUI = Main.screenshotUI;
@@ -229,8 +231,8 @@ export default class BigShotExtension extends Extension {
 
         this._screenshotUI = screenshotUI;
 
-        // Detect available GStreamer pipelines
-        this._detectPipelines();
+        // NOTE: Pipeline detection moved to lazy — runs on first screencast attempt
+        // to avoid blocking enable() with synchronous subprocess calls.
 
         // Create all parts (modules)
         this._createParts();
@@ -238,7 +240,10 @@ export default class BigShotExtension extends Extension {
         // Monkey-patch screencast proxy
         this._patchScreencast();
 
-        console.log('[Big Shot] Extension enabled');
+        // Initialize translations
+        this.initTranslations();
+
+        console.debug('[Big Shot] Extension enabled');
     }
 
     disable() {
@@ -256,15 +261,19 @@ export default class BigShotExtension extends Extension {
         this._unpatchScreencast();
 
         this._screenshotUI = null;
-        this._availableConfigs = [];
+        this._availableConfigs = null;
 
-        console.log('[Big Shot] Extension disabled');
+        console.debug('[Big Shot] Extension disabled');
     }
 
     _detectPipelines() {
+        // Already detected — skip
+        if (this._availableConfigs !== null)
+            return;
+
         // 1. Detect GPU vendor(s) via lspci (same as big-video-converter)
         this._gpuVendors = detectGpuVendors();
-        console.log(`[Big Shot] Detected GPU vendor(s): ${this._gpuVendors.join(', ')}`);
+        console.debug(`[Big Shot] Detected GPU vendor(s): ${this._gpuVendors.join(', ')}`);
 
         const vendorSet = new Set(this._gpuVendors);
 
@@ -296,9 +305,9 @@ export default class BigShotExtension extends Extension {
         if (this._availableConfigs.length === 0) {
             console.warn('[Big Shot] No compatible GStreamer pipeline found!');
         } else {
-            console.log(`[Big Shot] Pipeline priority (${this._availableConfigs.length} config(s)):`);
+            console.debug(`[Big Shot] Pipeline priority (${this._availableConfigs.length} config(s)):`);
             this._availableConfigs.forEach((c, i) => {
-                console.log(`  [${i}] ${c.id} — ${c.label}`);
+                console.debug(`  [${i}] ${c.id} — ${c.label}`);
             });
         }
     }
@@ -322,6 +331,28 @@ export default class BigShotExtension extends Extension {
         // Crop — crop with padding
         this._crop = new PartCrop(ui, ext);
         this._parts.push(this._crop);
+
+        // Wire toolbar tool changes to beautify parts
+        this._toolbar.onToolChanged((toolId) => {
+            // Gradient picker: show when 'gradient' is active
+            this._gradient.setVisible(toolId === 'gradient');
+
+            // Crop: activate/deactivate when 'crop' is active
+            if (toolId === 'crop') {
+                const monitor = global.display.get_current_monitor();
+                const rect = global.display.get_monitor_geometry(monitor);
+                this._crop.activate(rect.width, rect.height);
+            } else {
+                this._crop.deactivate();
+            }
+
+            // Padding: cycle padding when 'padding' is clicked
+            if (toolId === 'padding') {
+                this._crop.cyclePadding();
+                // Deselect padding button (acts as action, not toggle)
+                this._toolbar.selectTool(null);
+            }
+        });
 
         // Audio — Desktop + Mic toggle buttons
         this._audio = new PartAudio(ui, ext);
@@ -386,8 +417,11 @@ export default class BigShotExtension extends Extension {
     }
 
     async _screencastCommonAsync(filePath, options, originalMethod) {
+        // Lazy pipeline detection on first use (avoids blocking enable())
+        this._detectPipelines();
+
         if (this._availableConfigs.length === 0) {
-            console.log('[Big Shot] No custom pipelines, using GNOME default');
+            console.debug('[Big Shot] No custom pipelines, using GNOME default');
             return originalMethod(filePath, options);
         }
 
@@ -401,12 +435,12 @@ export default class BigShotExtension extends Extension {
             const pipeline = this._makePipelineString(config, framerateCaps, downsize);
             const pipelineOptions = { ...options, pipeline };
 
-            console.log(`[Big Shot] Trying pipeline [${i}]: ${config.id} (${config.label})`);
+            console.debug(`[Big Shot] Trying pipeline [${i}]: ${config.id} (${config.label})`);
             this._indicator?.onPipelineStarting();
 
             try {
                 const result = await originalMethod(filePath, pipelineOptions);
-                console.log(`[Big Shot] Pipeline ${config.id} succeeded`);
+                console.debug(`[Big Shot] Pipeline ${config.id} succeeded`);
                 this._indicator?.onPipelineReady();
                 fixFilePath(filePath, config.ext);
                 return result;

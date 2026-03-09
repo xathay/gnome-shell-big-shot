@@ -51,7 +51,10 @@ export class PartAnnotation extends PartUI {
 
         this._overlay = new DrawingOverlay(this._ui, this._toolbar);
 
-        // Size the overlay to match the screenshot area
+        // Size the overlay to the full monitor — the ScreenshotUI covers the
+        // entire screen regardless of selection mode (fullscreen/window/area).
+        // Coordinate mapping to the actual captured region is handled by
+        // DrawingOverlay._toImageCoords().
         const monitor = global.display.get_current_monitor();
         const rect = global.display.get_monitor_geometry(monitor);
         this._overlay.show(rect.width, rect.height);

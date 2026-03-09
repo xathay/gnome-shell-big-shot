@@ -32,18 +32,25 @@ export class PartIndicator extends PartUI {
         const indicator = Main.panel.statusArea?.screenRecording;
         if (!indicator) return;
 
+        const indicatorActor = indicator;
+        if (!indicatorActor.add_child) return;
+
         // Replace the timer content with a spinner
         if (!this._spinner) {
             this._spinner = new Animation.Spinner(16, { animate: true });
         }
 
-        const indicatorActor = indicator;
         if (indicatorActor.first_child) {
             this._originalChild = indicatorActor.first_child;
             this._originalChild.visible = false;
         }
-        indicatorActor.add_child(this._spinner);
-        this._spinner.play();
+
+        try {
+            indicatorActor.add_child(this._spinner);
+            this._spinner.play();
+        } catch {
+            // Indicator structure may differ between GNOME versions
+        }
     }
 
     /**

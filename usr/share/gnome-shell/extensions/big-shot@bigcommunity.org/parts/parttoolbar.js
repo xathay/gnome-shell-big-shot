@@ -98,6 +98,7 @@ export class PartToolbar extends PartUI {
             style_class: 'big-shot-color-button',
             style: 'background: #ed333b; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
             can_focus: true,
+            accessible_name: _('Stroke Color'),
         });
         this._colorButton.connect('clicked', () => this._showColorPopup('stroke'));
         this._screenshotTools.add_child(this._colorButton);
@@ -108,6 +109,7 @@ export class PartToolbar extends PartUI {
             style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
                    'border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
             can_focus: true,
+            accessible_name: _('Fill Color'),
             child: new St.Icon({
                 icon_name: 'color-select-symbolic',
                 icon_size: 12,
@@ -121,6 +123,7 @@ export class PartToolbar extends PartUI {
             style_class: 'screenshot-ui-show-pointer-button',
             child: new St.Label({ text: '3', y_align: Clutter.ActorAlign.CENTER }),
             can_focus: true,
+            accessible_name: _('Brush Size'),
         });
         this._sizeButton.connect('clicked', () => this._cycleBrushSize());
         this._screenshotTools.add_child(this._sizeButton);
@@ -133,6 +136,7 @@ export class PartToolbar extends PartUI {
                 icon_size: 16,
             }),
             can_focus: true,
+            accessible_name: _('Undo'),
         });
         this._undoButton.connect('clicked', () => this._onUndo());
         this._screenshotTools.add_child(this._undoButton);
@@ -144,6 +148,7 @@ export class PartToolbar extends PartUI {
                 icon_size: 16,
             }),
             can_focus: true,
+            accessible_name: _('Redo'),
         });
         this._redoButton.connect('clicked', () => this._onRedo());
         this._screenshotTools.add_child(this._redoButton);
@@ -155,10 +160,6 @@ export class PartToolbar extends PartUI {
         const uiGroup = this._ui;
         if (uiGroup) {
             uiGroup.add_child(this._container);
-            // Position it above the controls
-            this._container.set_style(
-                'position: fixed; margin-bottom: 80px; z-index: 100;'
-            );
         }
 
         // Initially hidden — shown when screenshot mode is active
@@ -203,12 +204,20 @@ export class PartToolbar extends PartUI {
             this._activeTool = null;
         }
 
-        // Notify the annotation overlay
-        this._ext._toolbar?._onToolChanged?.(this._activeTool);
+        // Notify listeners (annotation overlay, beautify tools)
+        this._onToolChanged(this._activeTool);
     }
 
     _onToolChanged(toolId) {
-        // Can be overridden or connected externally
+        // Can be connected externally via callback
+        this._toolChangedCallback?.(toolId);
+    }
+
+    /**
+     * Set an external callback for tool changes.
+     */
+    onToolChanged(callback) {
+        this._toolChangedCallback = callback;
     }
 
     /**
@@ -274,6 +283,7 @@ export class PartToolbar extends PartUI {
                            'border-radius: 4px; margin: 2px;',
                     reactive: true,
                     can_focus: true,
+                    accessible_name: color,
                 });
                 swatch.connect('clicked', () => {
                     this._applyColor(target, color);
@@ -303,15 +313,20 @@ export class PartToolbar extends PartUI {
         const anchor = target === 'fill' ? this._fillButton : this._colorButton;
         this._ui.add_child(this._colorPopup);
 
-        // Position near the button
+        // Position near the button, clamped to screen bounds
         const [bx, by] = anchor.get_transformed_position();
-        this._colorPopup.set_position(
-            bx - 40,
-            by - this._colorPopup.height - 8
-        );
+        const monitor = global.display.get_current_monitor();
+        const monitorGeo = global.display.get_monitor_geometry(monitor);
+        let px = bx - 40;
+        let py = by - this._colorPopup.height - 8;
+        px = Math.max(monitorGeo.x, Math.min(px, monitorGeo.x + monitorGeo.width - this._colorPopup.width));
+        py = Math.max(monitorGeo.y, py);
+        this._colorPopup.set_position(px, py);
 
         // Close on click outside (after slight delay to avoid immediate close)
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+        this._popupTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this._popupTimeoutId = 0;
+            if (this._destroyed) return GLib.SOURCE_REMOVE;
             this._colorPopupClickId = global.stage.connect('button-press-event', () => {
                 this._closeColorPopup();
                 return Clutter.EVENT_PROPAGATE;
@@ -344,6 +359,10 @@ export class PartToolbar extends PartUI {
     }
 
     _closeColorPopup() {
+        if (this._popupTimeoutId) {
+            GLib.source_remove(this._popupTimeoutId);
+            this._popupTimeoutId = 0;
+        }
         if (this._colorPopupClickId) {
             global.stage.disconnect(this._colorPopupClickId);
             this._colorPopupClickId = null;

@@ -77,3 +77,27 @@ msgstr "Grabar Audio del Escritorio"
 
 msgid "Record Microphone"
 msgstr "Grabar Micrófono"
+
+msgid "Stroke Color"
+msgstr "Color del Trazo"
+
+msgid "Fill Color"
+msgstr "Color de Relleno"
+
+msgid "Brush Size"
+msgstr "Tamaño del Pincel"
+
+msgid "Undo"
+msgstr "Deshacer"
+
+msgid "Redo"
+msgstr "Rehacer"
+
+msgid "Text…"
+msgstr "Texto…"
+
+msgid "Annotation text"
+msgstr "Texto de anotación"
+
+msgid "Confirm"
+msgstr "Confirmar"

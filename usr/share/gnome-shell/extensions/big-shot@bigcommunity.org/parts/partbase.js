@@ -4,9 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-import GObject from 'gi://GObject';
-import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import St from 'gi://St';
 
 // =============================================================================
 // PartBase — Simplest base class
@@ -37,6 +36,7 @@ export class PartUI extends PartBase {
         // Monitor screenshot/screencast mode toggle
         const shotBtn = this._ui._shotButton;
         if (shotBtn) {
+            this._isCastMode = !shotBtn.checked;
             this._connectSignal(shotBtn, 'notify::checked', () => {
                 this._isCastMode = !shotBtn.checked;
                 this._onModeChanged(this._isCastMode);
@@ -100,7 +100,7 @@ export class PartPopupSelect extends PartUI {
             reactive: true,
         });
 
-        this._popup.set_style('position: absolute; bottom: 40px; background: rgba(30,30,30,0.95); border-radius: 12px; padding: 4px;');
+        this._popup.set_style('background: rgba(30,30,30,0.95); border-radius: 12px; padding: 4px;');
 
         for (const opt of this._options) {
             const item = new St.Button({
@@ -134,6 +134,10 @@ export class PartPopupSelect extends PartUI {
 
     _showPopup() {
         this._popup.visible = !this._popup.visible;
+        if (this._popup.visible) {
+            const [bx, by] = this._button.get_transformed_position();
+            this._popup.set_position(bx, by - this._popup.height - 8);
+        }
     }
 
     _onModeChanged(isCast) {

@@ -10,13 +10,26 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GLib from 'gi://GLib';
-import Cairo from 'gi://cairo';
+import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {
     DrawingMode,
     DrawingOptions,
     createAction,
 } from './actions.js';
+
+const TOOL_TO_MODE = {
+    'pen': DrawingMode.PEN,
+    'arrow': DrawingMode.ARROW,
+    'line': DrawingMode.LINE,
+    'rect': DrawingMode.RECT,
+    'circle': DrawingMode.CIRCLE,
+    'text': DrawingMode.TEXT,
+    'highlight': DrawingMode.HIGHLIGHTER,
+    'censor': DrawingMode.CENSOR,
+    'number': DrawingMode.NUMBER,
+    'select': DrawingMode.SELECT,
+};
 
 export class DrawingOverlay {
     constructor(screenshotUI, toolbar) {
@@ -44,6 +57,7 @@ export class DrawingOverlay {
             reactive: true,
             x_expand: true,
             y_expand: true,
+            accessible_name: 'Drawing canvas',
         });
         this._actor.set_content(this._canvas);
 
@@ -90,7 +104,7 @@ export class DrawingOverlay {
 
     _getOptions() {
         const toolbar = this._toolbar;
-        const mode = toolbar?.activeTool?.toUpperCase() || DrawingMode.PEN;
+        const mode = TOOL_TO_MODE[toolbar?.activeTool] || DrawingMode.PEN;
         const colorHex = toolbar?.currentColor || '#ed333b';
         const fillHex = toolbar?.fillColor;
         const size = toolbar?.brushSize || 3;
@@ -156,7 +170,7 @@ export class DrawingOverlay {
         }
 
         // Drawing mode
-        const mode = this._toolbar.activeTool.toUpperCase();
+        const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
         this._isDrawing = true;
         this._startPoint = [ix, iy];
 
@@ -183,7 +197,7 @@ export class DrawingOverlay {
 
         if (!this._isDrawing) return Clutter.EVENT_PROPAGATE;
 
-        const mode = this._toolbar.activeTool?.toUpperCase();
+        const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
 
         if ((mode === DrawingMode.PEN || mode === DrawingMode.HIGHLIGHTER) && this._currentStroke) {
             this._currentStroke.push([ix, iy]);
@@ -205,7 +219,7 @@ export class DrawingOverlay {
 
         const [x, y] = event.get_coords();
         const [ix, iy] = this._toImageCoords(x, y);
-        const mode = this._toolbar.activeTool?.toUpperCase();
+        const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
         const shift = (event.get_state() & Clutter.ModifierType.SHIFT_MASK) !== 0;
         const options = this._getOptions();
 
@@ -363,15 +377,17 @@ export class DrawingOverlay {
         });
 
         this._textEntry = new St.Entry({
-            hint_text: 'Text…',
+            hint_text: _('Text…'),
             style: 'width: 200px; min-height: 28px; font-size: 14px;',
             can_focus: true,
+            accessible_name: _('Annotation text'),
         });
 
         const confirmBtn = new St.Button({
             style_class: 'screenshot-ui-show-pointer-button',
             child: new St.Icon({ icon_name: 'object-select-symbolic', icon_size: 16 }),
             can_focus: true,
+            accessible_name: _('Confirm'),
         });
 
         const confirmAction = () => {
@@ -413,13 +429,18 @@ export class DrawingOverlay {
         );
 
         // Focus the entry after a frame
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+        this._focusIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            this._focusIdleId = 0;
             this._textEntry?.grab_key_focus();
             return GLib.SOURCE_REMOVE;
         });
     }
 
     _closeTextPopover() {
+        if (this._focusIdleId) {
+            GLib.source_remove(this._focusIdleId);
+            this._focusIdleId = 0;
+        }
         this._textPopover?.destroy();
         this._textPopover = null;
         this._textEntry = null;
@@ -446,9 +467,9 @@ export class DrawingOverlay {
     // =========================================================================
 
     _onDraw(cr, width, height) {
-        // Clear
+        // Clear (Cairo.Operator.CLEAR = 0)
         cr.save();
-        cr.setOperator(0); // CLEAR
+        cr.setOperator(0);
         cr.paint();
         cr.restore();
 
@@ -465,7 +486,7 @@ export class DrawingOverlay {
         // Draw current in-progress stroke
         if (this._isDrawing && this._currentStroke && this._currentStroke.length > 1) {
             const options = this._getOptions();
-            const mode = this._toolbar.activeTool?.toUpperCase();
+            const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
             let tempAction;
 
             if (mode === DrawingMode.PEN) {

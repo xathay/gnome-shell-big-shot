@@ -5,6 +5,5 @@
     "shell-version": ["46", "47", "48", "49"],
     "version": 1,
     "url": "https://github.com/BigCommunity/gnome-shell-big-shot",
-    "gettext-domain": "big-shot@bigcommunity.org",
-    "settings-schema": "org.gnome.shell.extensions.big-shot"
+    "gettext-domain": "big-shot@bigcommunity.org"
 }
