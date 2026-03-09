@@ -1,0 +1,79 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the gnome-shell-big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: gnome-shell-big-shot\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Desktop Audio"
+msgstr "Десктопный звук"
+#: NEEDS WORK
+msgid "Record Desktop Audio"
+msgstr "Запись аудио с рабочего стола"
+#: NEEDS WORK
+msgid "Microphone"
+msgstr "Микрофон"
+#: NEEDS WORK
+msgid "Record Microphone"
+msgstr "Запись микрофона"
+#: NEEDS WORK
+msgid "Desktop"
+msgstr "Рабочий стол"
+#: NEEDS WORK
+msgid "Mic"
+msgstr "Микрофон"
+#: NEEDS WORK
+msgid "Gradient Angle"
+msgstr "Угол градиента"
+#: NEEDS WORK
+msgid "Border Radius"
+msgstr "Радиус границы"
+#: NEEDS WORK
+msgid "Pen"
+msgstr "Ручка"
+#: NEEDS WORK
+msgid "Arrow"
+msgstr "Стрелка"
+#: NEEDS WORK
+msgid "Line"
+msgstr "Линия"
+#: NEEDS WORK
+msgid "Rectangle"
+msgstr "Прямоугольник"
+#: NEEDS WORK
+msgid "Oval"
+msgstr "Овал"
+#: NEEDS WORK
+msgid "Text"
+msgstr "Текст"
+#: NEEDS WORK
+msgid "Highlighter"
+msgstr "Маркер"
+#: NEEDS WORK
+msgid "Censor"
+msgstr "Цензор"
+#: NEEDS WORK
+msgid "Number"
+msgstr "Число"
+#: NEEDS WORK
+msgid "Background"
+msgstr "Фон"
+#: NEEDS WORK
+msgid "Crop"
+msgstr "Обрезка"
+#: NEEDS WORK
+msgid "Padding"
+msgstr "Заполнение"
+#: NEEDS WORK
+msgid "No Fill"
+msgstr "Нет заливки"
