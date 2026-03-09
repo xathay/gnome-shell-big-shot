@@ -1,0 +1,112 @@
+/* Big Shot — Extension Stylesheet
+ *
+ * Uses GNOME Shell CSS conventions for native look.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+/* ===== Main Toolbar ===== */
+.big-shot-toolbar {
+    background-color: rgba(30, 30, 30, 0.92);
+    border-radius: 14px;
+    padding: 4px 8px;
+    margin-bottom: 8px;
+    spacing: 2px;
+}
+
+.big-shot-toolbar-section {
+    spacing: 2px;
+}
+
+/* ===== Tool Buttons ===== */
+.big-shot-tool-button {
+    border-radius: 10px;
+    padding: 6px 8px;
+    min-width: 32px;
+    min-height: 32px;
+}
+
+.big-shot-tool-button:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.big-shot-tool-button:checked {
+    background-color: rgba(255, 255, 255, 0.20);
+}
+
+.big-shot-tool-button:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ===== Separator ===== */
+.big-shot-separator {
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.15);
+    margin: 6px 4px;
+}
+
+/* ===== Color Button ===== */
+.big-shot-color-button {
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    margin: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.big-shot-color-button:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* ===== Audio Toggle Buttons ===== */
+.big-shot-audio-button {
+    border-radius: 10px;
+    padding: 4px 10px;
+    spacing: 6px;
+}
+
+.big-shot-audio-button:checked {
+    background-color: rgba(53, 132, 228, 0.4);
+}
+
+/* ===== Panel Indicator ===== */
+.big-shot-indicator {
+    spacing: 6px;
+}
+
+.big-shot-indicator-timer {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== Gradient Picker ===== */
+.big-shot-gradient-picker {
+    background-color: rgba(30, 30, 30, 0.92);
+    border-radius: 12px;
+    padding: 6px;
+    spacing: 4px;
+}
+
+.big-shot-gradient-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+}
+
+.big-shot-gradient-swatch:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.big-shot-gradient-swatch:checked {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== Crop Handles ===== */
+.big-shot-crop-handle {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background-color: white;
+    border: 2px solid rgba(0, 0, 0, 0.5);
+}
