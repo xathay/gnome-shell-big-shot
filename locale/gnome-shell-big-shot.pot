@@ -14,6 +14,15 @@ msgstr  "Project-Id-Version: gnome-shell-big-shot\n"
         "Content-Type: text/plain; charset=UTF-8\n"
         "Content-Transfer-Encoding: 8bit\n"
 
+msgid   "Text…"
+msgstr  ""
+
+msgid   "Annotation text"
+msgstr  ""
+
+msgid   "Confirm"
+msgstr  ""
+
 msgid   "Desktop Audio"
 msgstr  ""
 
@@ -72,6 +81,21 @@ msgid   "Crop"
 msgstr  ""
 
 msgid   "Padding"
+msgstr  ""
+
+msgid   "Stroke Color"
+msgstr  ""
+
+msgid   "Fill Color"
+msgstr  ""
+
+msgid   "Brush Size"
+msgstr  ""
+
+msgid   "Undo"
+msgstr  ""
+
+msgid   "Redo"
 msgstr  ""
 
 msgid   "No Fill"

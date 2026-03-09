@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Szöveg…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Megjegyzés szöveg"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Megerősít"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "Asztali hang"
@@ -74,6 +84,21 @@ msgstr "Vágás"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "Kitöltés"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "Vonal szín"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "Kitöltő szín"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Ecsetméret"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Visszavonás"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Újra végrehajtás"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "Nincs kitöltés"

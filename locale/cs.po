@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Text…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Text anotace"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Potvrdit"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "Desktopový zvuk"
@@ -74,6 +84,21 @@ msgstr "Oříznout"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "Vyplnění"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "Barva tahu"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "Barva výplně"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Velikost štětce"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Zpět"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Znovu provést"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "Žádné vyplnění"

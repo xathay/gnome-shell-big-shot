@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "텍스트…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "주석 텍스트"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "확인"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "데스크탑 오디오"
@@ -74,6 +84,21 @@ msgstr "자르기"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "패딩"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "선 색상"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "채우기 색상"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "브러시 크기"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "실행 취소"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "다시 실행"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "채우기 없음"

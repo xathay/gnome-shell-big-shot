@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Κείμενο…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Κείμενο σχολιασμού"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Επιβεβαίωση"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "Επιφάνεια Εργασίας Ήχου"
@@ -74,6 +84,21 @@ msgstr "Επεξεργασία"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "Γέμισμα"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "Χρώμα περιγράμματος"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "Χρώμα Γέμισης"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Μέγεθος Πινέλου"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Αναίρεση"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Επαναφορά"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "Χωρίς Γέμισμα"

@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "テキスト…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "注釈テキスト"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "確認"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "デスクトップオーディオ"
@@ -74,6 +84,21 @@ msgstr "トリミング"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "パディング"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "ストロークカラー"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "塗りつぶしの色"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "ブラシサイズ"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "元に戻す"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "やり直し"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "塗りつぶしなし"

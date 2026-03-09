@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Tekst…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Annotatsiooni tekst"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Kinnita"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "Töölaua heli"
@@ -74,6 +84,21 @@ msgstr "Kärpimine"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "Padding"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "Joonte värv"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "Täitevärv"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Harja suurus"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Tagasi võtta"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Korda tagasi"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "Ei täitmist"

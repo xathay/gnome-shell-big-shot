@@ -3,6 +3,7 @@
 # This file is distributed under the same license as the gnome-shell-big-shot package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gnome-shell-big-shot\n"
@@ -14,6 +15,15 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Текст…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Текст анотації"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Confirm"
 #: NEEDS WORK
 msgid "Desktop Audio"
 msgstr "Десктопний аудіо"
@@ -74,6 +84,21 @@ msgstr "Crop"
 #: NEEDS WORK
 msgid "Padding"
 msgstr "Padding"
+#: NEEDS WORK
+msgid "Stroke Color"
+msgstr "Контур кольору"
+#: NEEDS WORK
+msgid "Fill Color"
+msgstr "Заповнити колір"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Розмір пензля"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Відмінити"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Redo"
 #: NEEDS WORK
 msgid "No Fill"
 msgstr "No Fill"
