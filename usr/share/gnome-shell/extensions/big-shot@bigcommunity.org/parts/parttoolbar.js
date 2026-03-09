@@ -45,121 +45,112 @@ export class PartToolbar extends PartUI {
     }
 
     _buildToolbar() {
-        // Main container — positioned above the screenshot UI controls
+        // Main container — uses the native GNOME screenshot type button container
+        // style to integrate seamlessly with the bottom area controls
         this._container = new St.BoxLayout({
-            style_class: 'big-shot-toolbar',
+            style_class: 'screenshot-ui-type-button-container',
             vertical: false,
             reactive: true,
             can_focus: true,
             x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.END,
         });
 
-        // Screenshot tools section
-        this._screenshotTools = new St.BoxLayout({
-            style_class: 'big-shot-toolbar-section',
-            vertical: false,
-            visible: true,
-        });
-
-        // Annotation tools
+        // Annotation tools — use native screenshot-ui-type-button style
         for (const tool of SCREENSHOT_TOOLS) {
             const btn = this._createToolButton(tool);
-            this._screenshotTools.add_child(btn);
+            this._container.add_child(btn);
             this._toolButtons.set(tool.id, btn);
         }
 
-        // Separator
+        // Separator between drawing tools and beautify tools
         const sep1 = new St.Widget({
-            style_class: 'big-shot-separator',
-            style: 'width: 1px; background: rgba(255,255,255,0.2); margin: 4px 6px;',
+            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
         });
-        this._screenshotTools.add_child(sep1);
+        this._container.add_child(sep1);
 
         // Beautify tools (gradient, crop, padding)
         for (const tool of BEAUTIFY_TOOLS) {
             const btn = this._createToolButton(tool);
-            this._screenshotTools.add_child(btn);
+            this._container.add_child(btn);
             this._toolButtons.set(tool.id, btn);
         }
 
-        // Separator
+        // Separator between tools and style controls
         const sep2 = new St.Widget({
-            style_class: 'big-shot-separator',
-            style: 'width: 1px; background: rgba(255,255,255,0.2); margin: 4px 6px;',
+            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
         });
-        this._screenshotTools.add_child(sep2);
+        this._container.add_child(sep2);
 
-        // Style controls (color + fill + size)
+        // Style controls: color, fill, size
         this._currentColorHex = '#ed333b';
-        this._fillColorHex = null; // null = no fill
+        this._fillColorHex = null;
 
         this._colorButton = new St.Button({
-            style_class: 'big-shot-color-button',
-            style: 'background: #ed333b; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
+            style_class: 'screenshot-ui-type-button',
+            style: 'padding: 8px;',
             can_focus: true,
             accessible_name: _('Stroke Color'),
+            child: new St.Widget({
+                style: `background: #ed333b; border-radius: 50%; width: 18px; height: 18px;`,
+            }),
         });
         this._colorButton.connect('clicked', () => this._showColorPopup('stroke'));
-        this._screenshotTools.add_child(this._colorButton);
+        this._container.add_child(this._colorButton);
 
-        // Fill color button (shows a smaller circle with inner marker)
         this._fillButton = new St.Button({
-            style_class: 'big-shot-color-button',
-            style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
-                   'border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;',
+            style_class: 'screenshot-ui-type-button',
+            style: 'padding: 8px;',
             can_focus: true,
             accessible_name: _('Fill Color'),
-            child: new St.Icon({
-                icon_name: 'color-select-symbolic',
-                icon_size: 12,
-                style: 'color: rgba(255,255,255,0.6);',
+            child: new St.Widget({
+                style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
+                       'border-radius: 50%; width: 18px; height: 18px;',
             }),
         });
         this._fillButton.connect('clicked', () => this._showColorPopup('fill'));
-        this._screenshotTools.add_child(this._fillButton);
+        this._container.add_child(this._fillButton);
 
         this._sizeButton = new St.Button({
-            style_class: 'screenshot-ui-show-pointer-button',
+            style_class: 'screenshot-ui-type-button',
             child: new St.Label({ text: '3', y_align: Clutter.ActorAlign.CENTER }),
             can_focus: true,
             accessible_name: _('Brush Size'),
         });
         this._sizeButton.connect('clicked', () => this._cycleBrushSize());
-        this._screenshotTools.add_child(this._sizeButton);
+        this._container.add_child(this._sizeButton);
 
-        // Undo/Redo buttons
+        // Separator before undo/redo
+        const sep3 = new St.Widget({
+            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
+        });
+        this._container.add_child(sep3);
+
+        // Undo/Redo
         this._undoButton = new St.Button({
-            style_class: 'screenshot-ui-show-pointer-button',
-            child: new St.Icon({
-                icon_name: 'edit-undo-symbolic',
-                icon_size: 16,
-            }),
+            style_class: 'screenshot-ui-type-button',
+            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 16 }),
             can_focus: true,
             accessible_name: _('Undo'),
         });
         this._undoButton.connect('clicked', () => this._onUndo());
-        this._screenshotTools.add_child(this._undoButton);
+        this._container.add_child(this._undoButton);
 
         this._redoButton = new St.Button({
-            style_class: 'screenshot-ui-show-pointer-button',
-            child: new St.Icon({
-                icon_name: 'edit-redo-symbolic',
-                icon_size: 16,
-            }),
+            style_class: 'screenshot-ui-type-button',
+            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 16 }),
             can_focus: true,
             accessible_name: _('Redo'),
         });
         this._redoButton.connect('clicked', () => this._onRedo());
-        this._screenshotTools.add_child(this._redoButton);
+        this._container.add_child(this._redoButton);
 
-        this._container.add_child(this._screenshotTools);
-
-        // Add toolbar to the screenshotUI, above the bottom panel
-        // We insert it into the screenshot UI's layout
-        const uiGroup = this._ui;
-        if (uiGroup) {
-            uiGroup.add_child(this._container);
+        // Insert into the native GNOME bottom area group (above type buttons)
+        const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
+        if (bottomGroup) {
+            bottomGroup.insert_child_at_index(this._container, 0);
+        } else {
+            // Fallback: add directly to the screenshot UI
+            this._ui.add_child(this._container);
         }
 
         // Initially hidden — shown when screenshot mode is active
@@ -173,7 +164,7 @@ export class PartToolbar extends PartUI {
 
     _createToolButton(tool) {
         const btn = new St.Button({
-            style_class: 'screenshot-ui-show-pointer-button big-shot-tool-button',
+            style_class: 'screenshot-ui-type-button',
             toggle_mode: true,
             can_focus: true,
             child: new St.Icon({
@@ -338,22 +329,20 @@ export class PartToolbar extends PartUI {
     _applyColor(target, color) {
         if (target === 'stroke') {
             this._currentColorHex = color;
-            this._colorButton.set_style(
-                `background: ${color}; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;`
+            this._colorButton.child.set_style(
+                `background: ${color}; border-radius: 50%; width: 18px; height: 18px;`
             );
         } else {
             this._fillColorHex = color;
             if (color) {
-                this._fillButton.set_style(
-                    `background: ${color}; border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;`
+                this._fillButton.child.set_style(
+                    `background: ${color}; border-radius: 50%; width: 18px; height: 18px;`
                 );
-                this._fillButton.child.visible = false;
             } else {
-                this._fillButton.set_style(
+                this._fillButton.child.set_style(
                     'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
-                    'border-radius: 50%; width: 24px; height: 24px; margin: 2px 4px;'
+                    'border-radius: 50%; width: 18px; height: 18px;'
                 );
-                this._fillButton.child.visible = true;
             }
         }
     }
@@ -410,10 +399,8 @@ export class PartToolbar extends PartUI {
     _animateIn() {
         this._container.visible = true;
         this._container.opacity = 0;
-        this._container.translation_y = 20;
         this._container.ease({
             opacity: 255,
-            translation_y: 0,
             duration: 200,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
@@ -422,7 +409,6 @@ export class PartToolbar extends PartUI {
     _animateOut() {
         this._container.ease({
             opacity: 0,
-            translation_y: 20,
             duration: 150,
             mode: Clutter.AnimationMode.EASE_IN_QUAD,
             onComplete: () => {
@@ -433,7 +419,13 @@ export class PartToolbar extends PartUI {
 
     destroy() {
         this._closeColorPopup();
-        this._container?.destroy();
+        if (this._container) {
+            const parent = this._container.get_parent();
+            if (parent)
+                parent.remove_child(this._container);
+            this._container.destroy();
+            this._container = null;
+        }
         this._toolButtons.clear();
         super.destroy();
     }

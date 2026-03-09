@@ -32,10 +32,11 @@ export class PartGradient extends PartUI {
 
     _buildPicker() {
         this._picker = new St.BoxLayout({
-            style_class: 'big-shot-gradient-picker',
+            style_class: 'screenshot-ui-type-button-container',
             vertical: false,
             visible: false,
             reactive: true,
+            x_align: Clutter.ActorAlign.CENTER,
         });
 
         this._swatches = [];
@@ -106,9 +107,15 @@ export class PartGradient extends PartUI {
         if (this._swatches[this._selected])
             this._swatches[this._selected].checked = true;
 
-        // Add picker to screenshot UI
-        if (this._ui)
-            this._ui.add_child(this._picker);
+        // Insert into the native bottom area group for proper layout integration
+        if (this._ui) {
+            const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
+            if (bottomGroup) {
+                bottomGroup.insert_child_at_index(this._picker, 0);
+            } else {
+                this._ui.add_child(this._picker);
+            }
+        }
     }
 
     _onSwatchClicked(index) {
@@ -154,7 +161,12 @@ export class PartGradient extends PartUI {
     }
 
     destroy() {
-        this._picker?.destroy();
+        if (this._picker) {
+            const parent = this._picker.get_parent();
+            if (parent) parent.remove_child(this._picker);
+            this._picker.destroy();
+            this._picker = null;
+        }
         this._swatches = [];
         super.destroy();
     }

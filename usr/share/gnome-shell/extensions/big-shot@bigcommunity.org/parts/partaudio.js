@@ -104,8 +104,8 @@ export class PartAudio extends PartUI {
             _('Record Microphone')
         );
 
-        // Add buttons to the type button container (where Selection/Screen/Window are)
-        const typeContainer = this._ui._castTypeButtonContainer ?? this._ui._typeButtonContainer;
+        // Add buttons to the native type button container (same as Selection/Screen/Window)
+        const typeContainer = this._ui._typeButtonContainer;
         if (typeContainer) {
             typeContainer.add_child(this._desktopBtn.button);
             typeContainer.add_child(this._micBtn.button);
@@ -185,8 +185,16 @@ export class PartAudio extends PartUI {
     }
 
     destroy() {
-        this._desktopBtn?.destroy();
-        this._micBtn?.destroy();
+        if (this._desktopBtn?.button) {
+            const parent = this._desktopBtn.button.get_parent();
+            if (parent) parent.remove_child(this._desktopBtn.button);
+            this._desktopBtn.destroy();
+        }
+        if (this._micBtn?.button) {
+            const parent = this._micBtn.button.get_parent();
+            if (parent) parent.remove_child(this._micBtn.button);
+            this._micBtn.destroy();
+        }
         this._disconnectMixer();
         this._mixer?.close();
         this._mixer = null;

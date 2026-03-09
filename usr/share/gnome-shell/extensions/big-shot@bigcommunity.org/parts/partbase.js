@@ -116,12 +116,18 @@ export class PartPopupSelect extends PartUI {
             this._popup.add_child(item);
         }
 
-        // Add to the bottom area of the screenshot UI
-        const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
-        if (bottomGroup) {
-            bottomGroup.add_child(this._button);
-            bottomGroup.add_child(this._popup);
+        // Insert into the native show-pointer container (right side of bottom bar)
+        // or fall back to the bottom area group
+        const showPointerContainer = this._ui._showPointerButtonContainer;
+        if (showPointerContainer) {
+            showPointerContainer.insert_child_at_index(this._button, 0);
+        } else {
+            const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
+            if (bottomGroup)
+                bottomGroup.add_child(this._button);
         }
+        // Popup is added to the screenhotUI directly for proper z-ordering
+        this._ui.add_child(this._popup);
 
         // Only visible in cast mode
         this._button.visible = false;
@@ -146,8 +152,18 @@ export class PartPopupSelect extends PartUI {
     }
 
     destroy() {
-        this._popup?.destroy();
-        this._button?.destroy();
+        if (this._popup) {
+            const popupParent = this._popup.get_parent();
+            if (popupParent) popupParent.remove_child(this._popup);
+            this._popup.destroy();
+            this._popup = null;
+        }
+        if (this._button) {
+            const btnParent = this._button.get_parent();
+            if (btnParent) btnParent.remove_child(this._button);
+            this._button.destroy();
+            this._button = null;
+        }
         super.destroy();
     }
 }
