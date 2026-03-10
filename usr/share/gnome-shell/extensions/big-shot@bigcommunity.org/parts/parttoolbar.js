@@ -12,6 +12,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import PangoCairo from 'gi://PangoCairo';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { PartUI } from './partbase.js';
@@ -42,6 +43,7 @@ export class PartToolbar extends PartUI {
         this._editMode = false;
         this._currentColorHex = '#ed333b';
         this._fillColorHex = null;
+        this._currentFont = 'Sans';
 
         this._buildToolbar();
     }
@@ -132,6 +134,24 @@ export class PartToolbar extends PartUI {
         this._sizeButton.connect('leave-event', () => this._hideTooltip());
         styleRow.add_child(this._sizeButton);
 
+        // Font selector (visible only for Text tool)
+        this._fontLabel = new St.Label({
+            text: this._currentFont,
+            style: 'color: #ffffff; font-size: 12px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this._fontButton = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: this._fontLabel,
+            can_focus: true,
+            accessible_name: _('Font'),
+            visible: false,
+        });
+        this._fontButton.connect('clicked', () => this._showFontPopup());
+        this._fontButton.connect('enter-event', () => this._showTooltip(this._fontButton, _('Font')));
+        this._fontButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._fontButton);
+
         // Separator
         styleRow.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
 
@@ -221,6 +241,7 @@ export class PartToolbar extends PartUI {
                 otherBtn.checked = false;
         }
         this._activeTool = btn.checked ? toolId : null;
+        this._fontButton.visible = (this._activeTool === 'text');
         this._onToolChanged(this._activeTool);
     }
 
@@ -237,6 +258,7 @@ export class PartToolbar extends PartUI {
             for (const [, btn] of this._toolButtons)
                 btn.checked = false;
             this._activeTool = null;
+            this._fontButton.visible = false;
             this._onToolChanged(null);
             return;
         }
@@ -245,6 +267,7 @@ export class PartToolbar extends PartUI {
         for (const [id, otherBtn] of this._toolButtons)
             otherBtn.checked = (id === toolId);
         this._activeTool = toolId;
+        this._fontButton.visible = (toolId === 'text');
         this._onToolChanged(toolId);
     }
 
@@ -315,6 +338,94 @@ export class PartToolbar extends PartUI {
     _closeSizePopup() {
         this._sizePopup?.destroy();
         this._sizePopup = null;
+    }
+
+    _showFontPopup() {
+        this._closeFontPopup();
+
+        this._fontPopup = new St.BoxLayout({
+            style_class: 'big-shot-edit-popup',
+            vertical: true,
+            reactive: true,
+            style: 'padding: 4px;',
+        });
+
+        // Get system fonts
+        const fontMap = PangoCairo.FontMap.get_default();
+        const families = fontMap.list_families();
+        const fontNames = families.map(f => f.get_name()).sort((a, b) => a.localeCompare(b));
+
+        // Scrollable list
+        const scrollView = new St.ScrollView({
+            style: 'max-height: 300px; min-width: 200px;',
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+        });
+
+        const listBox = new St.BoxLayout({ vertical: true, style: 'spacing: 2px;' });
+
+        for (const name of fontNames) {
+            const btn = new St.Button({
+                style_class: 'big-shot-edit-tool-btn',
+                can_focus: true,
+                x_expand: true,
+                child: new St.Label({
+                    text: name,
+                    style: `color: #ffffff; font-size: 13px; font-family: "${name}"; text-align: left;`,
+                    x_align: Clutter.ActorAlign.START,
+                    x_expand: true,
+                }),
+            });
+            if (name === this._currentFont)
+                btn.add_style_pseudo_class('checked');
+            btn.connect('clicked', () => {
+                this._currentFont = name;
+                this._fontLabel.text = name;
+                this._closeFontPopup();
+            });
+            listBox.add_child(btn);
+        }
+
+        scrollView.set_child(listBox);
+        this._fontPopup.add_child(scrollView);
+
+        this._ui.add_child(this._fontPopup);
+
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            if (!this._fontPopup) return GLib.SOURCE_REMOVE;
+            const [bx, by] = this._fontButton.get_transformed_position();
+            const monitor = global.display.get_current_monitor();
+            const geo = global.display.get_monitor_geometry(monitor);
+            let cpx = bx;
+            let cpy = by - this._fontPopup.height - 8;
+            cpx = Math.max(geo.x, Math.min(cpx, geo.x + geo.width - this._fontPopup.width));
+            cpy = Math.max(geo.y, cpy);
+            this._fontPopup.set_position(cpx, cpy);
+            return GLib.SOURCE_REMOVE;
+        });
+
+        this._fontPopupTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this._fontPopupTimeoutId = 0;
+            if (this._destroyed) return GLib.SOURCE_REMOVE;
+            this._fontPopupClickId = global.stage.connect('button-press-event', () => {
+                this._closeFontPopup();
+                return Clutter.EVENT_PROPAGATE;
+            });
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _closeFontPopup() {
+        if (this._fontPopupTimeoutId) {
+            GLib.source_remove(this._fontPopupTimeoutId);
+            this._fontPopupTimeoutId = 0;
+        }
+        if (this._fontPopupClickId) {
+            global.stage.disconnect(this._fontPopupClickId);
+            this._fontPopupClickId = null;
+        }
+        this._fontPopup?.destroy();
+        this._fontPopup = null;
     }
 
     _setBrushSize(size) {
@@ -429,6 +540,7 @@ export class PartToolbar extends PartUI {
 
     get currentColor() { return this._currentColorHex || '#ed333b'; }
     get fillColor() { return this._fillColorHex; }
+    get currentFont() { return this._currentFont || 'Sans'; }
 
     _onUndo() { }
     _onRedo() { }
@@ -496,6 +608,7 @@ export class PartToolbar extends PartUI {
     destroy() {
         this._closeColorPopup();
         this._closeSizePopup();
+        this._closeFontPopup();
         this._hideTooltip();
 
         if (this._editButton) {

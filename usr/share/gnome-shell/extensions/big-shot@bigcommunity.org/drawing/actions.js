@@ -7,6 +7,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+import Pango from 'gi://Pango';
+import PangoCairo from 'gi://PangoCairo';
+
 // =============================================================================
 // DRAWING MODES
 // =============================================================================
@@ -334,21 +337,27 @@ export class TextAction extends DrawingAction {
         const [wx, wy] = toWidget(...this.position);
         const size = this.fontSize * scale;
 
-        cr.selectFontFace(this.options.font, 0, 0); // NORMAL, NORMAL
-        cr.setFontSize(size);
+        // Use PangoCairo for proper font rendering
+        const layout = PangoCairo.create_layout(cr);
+        const fontDesc = Pango.FontDescription.from_string(`${this.options.font} ${size}`);
+        layout.set_font_description(fontDesc);
+        layout.set_text(this.text, -1);
 
-        const extents = cr.textExtents(this.text);
-        const tx = wx - extents.width / 2 - extents.xBearing;
-        const ty = wy;
+        const [inkRect, logicalRect] = layout.get_pixel_extents();
+        const textWidth = logicalRect.width;
+        const textHeight = logicalRect.height;
+
+        const tx = wx - textWidth / 2;
+        const ty = wy - textHeight;
 
         // Background fill
         if (this.options.fillColor) {
             const pad = 4 * scale;
             cr.setSourceRGBA(...this.options.fillColor);
-            const bgX = tx - pad + extents.xBearing;
-            const bgY = ty - size - pad + extents.yBearing;
-            const bgW = extents.width + 2 * pad;
-            const bgH = size + 2 * pad;
+            const bgX = tx - pad;
+            const bgY = ty - pad;
+            const bgW = textWidth + 2 * pad;
+            const bgH = textHeight + 2 * pad;
 
             // Rounded rectangle
             const r = Math.min(6 * scale, Math.min(bgW, bgH) / 4);
@@ -364,7 +373,7 @@ export class TextAction extends DrawingAction {
         // Text
         cr.moveTo(tx, ty);
         cr.setSourceRGBA(...this.options.primaryColor);
-        cr.showText(this.text);
+        PangoCairo.show_layout(cr, layout);
     }
 
     getBounds() {
@@ -458,6 +467,80 @@ export class CensorAction extends RectAction {
             }
         }
         cr.restore();
+    }
+
+    /**
+     * Apply real pixelation on GdkPixbuf at save time.
+     */
+    drawReal(pixbuf, GdkPixbuf, GLib, toWidget, scale) {
+        let [x1, y1] = toWidget(...this.start);
+        let [x2, y2] = toWidget(...this.end);
+
+        const imgW = pixbuf.get_width();
+        const imgH = pixbuf.get_height();
+
+        const x = Math.round(Math.max(0, Math.min(Math.min(x1, x2), imgW - 1)));
+        const y = Math.round(Math.max(0, Math.min(Math.min(y1, y2), imgH - 1)));
+        const w = Math.round(Math.min(Math.abs(x2 - x1), imgW - x));
+        const h = Math.round(Math.min(Math.abs(y2 - y1), imgH - y));
+
+        if (w < 2 || h < 2) return pixbuf;
+
+        const blockSize = Math.max(4, Math.round(8 * scale));
+
+        const bytes = pixbuf.read_pixel_bytes();
+        const data = bytes.get_data();
+        const rowstride = pixbuf.get_rowstride();
+        const nChannels = pixbuf.get_n_channels();
+
+        const arr = new Uint8Array(data.length);
+        for (let i = 0; i < data.length; i++) arr[i] = data[i];
+
+        const blocksX = Math.ceil(w / blockSize);
+        const blocksY = Math.ceil(h / blockSize);
+
+        for (let bx = 0; bx < blocksX; bx++) {
+            for (let by = 0; by < blocksY; by++) {
+                const bx0 = x + bx * blockSize;
+                const by0 = y + by * blockSize;
+                const bx1 = Math.min(bx0 + blockSize, x + w, imgW);
+                const by1 = Math.min(by0 + blockSize, y + h, imgH);
+
+                let rSum = 0, gSum = 0, bSum = 0, aSum = 0, count = 0;
+                for (let py = by0; py < by1; py++) {
+                    for (let px = bx0; px < bx1; px++) {
+                        const off = py * rowstride + px * nChannels;
+                        rSum += arr[off]; gSum += arr[off + 1];
+                        bSum += arr[off + 2];
+                        if (nChannels === 4) aSum += arr[off + 3];
+                        count++;
+                    }
+                }
+                if (count === 0) continue;
+
+                const avgR = (rSum / count) | 0;
+                const avgG = (gSum / count) | 0;
+                const avgB = (bSum / count) | 0;
+                const avgA = nChannels === 4 ? ((aSum / count) | 0) : 255;
+
+                for (let py = by0; py < by1; py++) {
+                    for (let px = bx0; px < bx1; px++) {
+                        const off = py * rowstride + px * nChannels;
+                        arr[off] = avgR;
+                        arr[off + 1] = avgG;
+                        arr[off + 2] = avgB;
+                        if (nChannels === 4) arr[off + 3] = avgA;
+                    }
+                }
+            }
+        }
+
+        const newBytes = GLib.Bytes.new(arr);
+        return GdkPixbuf.Pixbuf.new_from_bytes(
+            newBytes, pixbuf.get_colorspace(),
+            pixbuf.get_has_alpha(), pixbuf.get_bits_per_sample(),
+            imgW, imgH, rowstride
+        );
     }
 }
 

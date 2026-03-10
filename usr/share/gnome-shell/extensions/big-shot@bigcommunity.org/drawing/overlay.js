@@ -157,6 +157,7 @@ export class DrawingOverlay {
             primaryColor: this._hexToRGBA(colorHex),
             size,
             fillColor,
+            font: toolbar?.currentFont || 'Sans',
         });
     }
 
