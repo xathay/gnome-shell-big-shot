@@ -1,8 +1,9 @@
 /**
- * Big Shot — Main contextual toolbar
+ * Big Shot — Floating edit toolbar
  *
- * Appears above the screenshot UI controls.
- * Switches between Screenshot tools (annotation) and Screencast tools (audio/fps/resolution).
+ * Adds a pencil ✏️ toggle button to the native bottom row.
+ * When toggled, shows a floating popup with annotation tools
+ * positioned above the native screenshot panel.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -10,29 +11,27 @@
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import { PartUI } from './partbase.js';
 import { PALETTE } from '../drawing/colors.js';
 
-// Drawing modes mapped to icon names and labels
 const SCREENSHOT_TOOLS = [
-    { id: 'pen',       icon: 'big-shot-pen-symbolic',       label: () => _('Pen'),        key: '1' },
-    { id: 'arrow',     icon: 'big-shot-arrow-symbolic',     label: () => _('Arrow'),      key: '2' },
-    { id: 'line',      icon: 'big-shot-line-symbolic',      label: () => _('Line'),       key: '3' },
-    { id: 'rect',      icon: 'big-shot-rect-symbolic',      label: () => _('Rectangle'),  key: '4' },
-    { id: 'circle',    icon: 'big-shot-circle-symbolic',    label: () => _('Oval'),       key: '5' },
-    { id: 'text',      icon: 'big-shot-text-symbolic',      label: () => _('Text'),       key: '6' },
-    { id: 'highlight', icon: 'big-shot-highlight-symbolic', label: () => _('Highlighter'), key: '7' },
-    { id: 'censor',    icon: 'big-shot-censor-symbolic',    label: () => _('Censor'),     key: '8' },
-    { id: 'number',    icon: 'big-shot-number-symbolic',    label: () => _('Number'),     key: '9' },
+    { id: 'select', icon: 'big-shot-select-symbolic', label: () => _('Select / Move') },
+    { id: 'pen', icon: 'big-shot-pen-symbolic', label: () => _('Pen') },
+    { id: 'arrow', icon: 'big-shot-arrow-symbolic', label: () => _('Arrow') },
+    { id: 'line', icon: 'big-shot-line-symbolic', label: () => _('Line') },
+    { id: 'rect', icon: 'big-shot-rect-symbolic', label: () => _('Rectangle') },
+    { id: 'circle', icon: 'big-shot-circle-symbolic', label: () => _('Oval') },
+    { id: 'text', icon: 'big-shot-text-symbolic', label: () => _('Text') },
+    { id: 'highlight', icon: 'big-shot-highlight-symbolic', label: () => _('Highlighter') },
+    { id: 'censor', icon: 'big-shot-censor-symbolic', label: () => _('Censor') },
+    { id: 'blur', icon: 'big-shot-blur-symbolic', label: () => _('Blur') },
+    { id: 'number', icon: 'big-shot-number-symbolic', label: () => _('Number') },
 ];
 
-const BEAUTIFY_TOOLS = [
-    { id: 'gradient', icon: 'big-shot-gradient-symbolic', label: () => _('Background') },
-    { id: 'crop',     icon: 'big-shot-crop-symbolic',     label: () => _('Crop') },
-    { id: 'padding',  icon: 'big-shot-padding-symbolic',  label: () => _('Padding') },
-];
+
 
 export class PartToolbar extends PartUI {
     constructor(screenshotUI, extension) {
@@ -40,238 +39,307 @@ export class PartToolbar extends PartUI {
 
         this._activeTool = null;
         this._toolButtons = new Map();
+        this._editMode = false;
+        this._currentColorHex = '#ed333b';
+        this._fillColorHex = null;
 
         this._buildToolbar();
     }
 
+    _getIcon(iconName) {
+        const iconsDir = this._ext.dir.get_child('data').get_child('icons');
+        return new Gio.FileIcon({ file: iconsDir.get_child(`${iconName}.svg`) });
+    }
+
     _buildToolbar() {
-        // Main container — uses the native GNOME screenshot type button container
-        // style to integrate seamlessly with the bottom area controls
-        this._container = new St.BoxLayout({
-            style_class: 'screenshot-ui-type-button-container',
-            vertical: false,
+        const panel = this._ui._panel;
+        if (!panel) return;
+
+        // === Floating edit panel (positioned above native panel) ===
+        this._editPanel = new St.BoxLayout({
+            vertical: true,
+            style_class: 'big-shot-edit-popup',
+            visible: false,
             reactive: true,
-            can_focus: true,
-            x_align: Clutter.ActorAlign.CENTER,
         });
 
-        // Annotation tools — use native screenshot-ui-type-button style
+        // Row 1: Drawing tool icons
+        const toolRow = new St.BoxLayout({ style_class: 'big-shot-edit-row' });
         for (const tool of SCREENSHOT_TOOLS) {
-            const btn = this._createToolButton(tool);
-            this._container.add_child(btn);
+            const btn = new St.Button({
+                style_class: 'big-shot-edit-tool-btn',
+                toggle_mode: true,
+                can_focus: true,
+                child: new St.Icon({ gicon: this._getIcon(tool.icon), icon_size: 24 }),
+                accessible_name: tool.label(),
+            });
+            btn._toolId = tool.id;
+            btn.connect('clicked', () => this._onToolClicked(tool.id, btn));
+            btn.connect('enter-event', () => this._showTooltip(btn, tool.label()));
+            btn.connect('leave-event', () => this._hideTooltip());
+            toolRow.add_child(btn);
             this._toolButtons.set(tool.id, btn);
         }
+        this._editPanel.add_child(toolRow);
 
-        // Separator between drawing tools and beautify tools
-        const sep1 = new St.Widget({
-            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
+        // Row 2: Color + Fill + Size | Undo/Redo
+        const styleRow = new St.BoxLayout({ style_class: 'big-shot-edit-row' });
+
+        // Color swatch
+        this._colorSwatch = new St.Widget({
+            style: `background: ${this._currentColorHex}; border-radius: 50%; min-width: 24px; min-height: 24px; border: 2px solid rgba(255,255,255,0.3);`,
         });
-        this._container.add_child(sep1);
-
-        // Beautify tools (gradient, crop, padding)
-        for (const tool of BEAUTIFY_TOOLS) {
-            const btn = this._createToolButton(tool);
-            this._container.add_child(btn);
-            this._toolButtons.set(tool.id, btn);
-        }
-
-        // Separator between tools and style controls
-        const sep2 = new St.Widget({
-            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
-        });
-        this._container.add_child(sep2);
-
-        // Style controls: color, fill, size
-        this._currentColorHex = '#ed333b';
-        this._fillColorHex = null;
-
         this._colorButton = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            style: 'padding: 8px;',
+            style_class: 'big-shot-edit-tool-btn',
+            child: this._colorSwatch,
             can_focus: true,
-            accessible_name: _('Stroke Color'),
-            child: new St.Widget({
-                style: `background: #ed333b; border-radius: 50%; width: 18px; height: 18px;`,
-            }),
+            accessible_name: _('Color'),
         });
         this._colorButton.connect('clicked', () => this._showColorPopup('stroke'));
-        this._container.add_child(this._colorButton);
+        this._colorButton.connect('enter-event', () => this._showTooltip(this._colorButton, _('Color')));
+        this._colorButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._colorButton);
 
+        // Fill swatch
+        this._fillSwatch = new St.Widget({
+            style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; min-width: 24px; min-height: 24px;',
+        });
         this._fillButton = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            style: 'padding: 8px;',
+            style_class: 'big-shot-edit-tool-btn',
+            child: this._fillSwatch,
             can_focus: true,
-            accessible_name: _('Fill Color'),
-            child: new St.Widget({
-                style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
-                       'border-radius: 50%; width: 18px; height: 18px;',
-            }),
+            accessible_name: _('Fill'),
         });
         this._fillButton.connect('clicked', () => this._showColorPopup('fill'));
-        this._container.add_child(this._fillButton);
+        this._fillButton.connect('enter-event', () => this._showTooltip(this._fillButton, _('Fill')));
+        this._fillButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._fillButton);
 
+        // Size
+        this._sizeLabel = new St.Label({
+            text: '3',
+            style: 'color: #ffffff; font-size: 14px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
         this._sizeButton = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            child: new St.Label({ text: '3', y_align: Clutter.ActorAlign.CENTER }),
+            style_class: 'big-shot-edit-tool-btn',
+            child: this._sizeLabel,
             can_focus: true,
             accessible_name: _('Brush Size'),
         });
-        this._sizeButton.connect('clicked', () => this._cycleBrushSize());
-        this._container.add_child(this._sizeButton);
+        this._sizeButton.connect('clicked', () => this._showSizePopup());
+        this._sizeButton.connect('enter-event', () => this._showTooltip(this._sizeButton, _('Brush Size')));
+        this._sizeButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._sizeButton);
 
-        // Separator before undo/redo
-        const sep3 = new St.Widget({
-            style: 'width: 1px; min-height: 20px; background: rgba(255,255,255,0.15); margin: 4px 2px;',
-        });
-        this._container.add_child(sep3);
+        // Separator
+        styleRow.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
 
-        // Undo/Redo
+        // Undo
         this._undoButton = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 16 }),
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 24 }),
             can_focus: true,
             accessible_name: _('Undo'),
         });
         this._undoButton.connect('clicked', () => this._onUndo());
-        this._container.add_child(this._undoButton);
+        this._undoButton.connect('enter-event', () => this._showTooltip(this._undoButton, _('Undo')));
+        this._undoButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._undoButton);
 
+        // Redo
         this._redoButton = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 16 }),
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 24 }),
             can_focus: true,
             accessible_name: _('Redo'),
         });
         this._redoButton.connect('clicked', () => this._onRedo());
-        this._container.add_child(this._redoButton);
+        this._redoButton.connect('enter-event', () => this._showTooltip(this._redoButton, _('Redo')));
+        this._redoButton.connect('leave-event', () => this._hideTooltip());
+        styleRow.add_child(this._redoButton);
 
-        // Insert into the native GNOME bottom area group (above type buttons)
-        const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
-        if (bottomGroup) {
-            bottomGroup.insert_child_at_index(this._container, 0);
-        } else {
-            // Fallback: add directly to the screenshot UI
-            this._ui.add_child(this._container);
-        }
+        this._editPanel.add_child(styleRow);
 
-        // Initially hidden — shown when screenshot mode is active
-        this._container.visible = false;
+        // Add floating panel directly to screenshotUI (NOT inside native _panel)
+        this._ui.add_child(this._editPanel);
 
-        // Listen for UI open/close
-        this._connectSignal(this._ui, 'notify::visible', () => {
-            this._onUIVisibilityChanged();
-        });
-    }
-
-    _createToolButton(tool) {
-        const btn = new St.Button({
-            style_class: 'screenshot-ui-type-button',
+        // === Edit toggle button — placed in _showPointerButtonContainer ===
+        // This keeps _shotCastContainer clean for native camera/video buttons
+        this._editButton = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
             toggle_mode: true,
             can_focus: true,
-            child: new St.Icon({
-                icon_name: tool.icon,
-                icon_size: 16,
-            }),
+            child: new St.Icon({ icon_name: 'document-edit-symbolic', icon_size: 16 }),
+            accessible_name: _('Edit'),
+        });
+        this._editButton.connect('notify::checked', () => {
+            this._editMode = this._editButton.checked;
+            this._editPanel.visible = this._editMode && !this._isCastMode;
+            if (this._editPanel.visible) {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    this._repositionEditPanel();
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
         });
 
-        btn._toolId = tool.id;
-        btn.set_accessible_name(tool.label());
+        // Place in show-pointer container (right side of bottom bar)
+        // This avoids displacing the native shot/cast (camera/video) buttons
+        const showPointerContainer = this._ui._showPointerButtonContainer;
+        if (showPointerContainer) {
+            showPointerContainer.insert_child_at_index(this._editButton, 0);
+        } else {
+            // Fallback: add to bottom row
+            const bottomRow = this._ui._bottomRowContainer;
+            if (bottomRow) bottomRow.add_child(this._editButton);
+        }
 
-        btn.connect('clicked', () => this._onToolClicked(tool.id, btn));
+        this._connectSignal(this._ui, 'notify::visible', () => this._onUIVisibilityChanged());
+    }
 
-        return btn;
+    /**
+     * Position the floating edit panel centered above the native panel.
+     */
+    _repositionEditPanel() {
+        if (!this._editPanel?.visible) return;
+        const panel = this._ui._panel;
+        if (!panel) return;
+        const [px, py] = panel.get_transformed_position();
+        const pw = panel.width;
+        const epw = this._editPanel.width;
+        const eph = this._editPanel.height;
+        this._editPanel.set_position(
+            px + (pw - epw) / 2,
+            py - eph - 12
+        );
     }
 
     _onToolClicked(toolId, btn) {
-        // Toggle off other tools
         for (const [id, otherBtn] of this._toolButtons) {
-            if (id !== toolId) {
+            if (id !== toolId)
                 otherBtn.checked = false;
-            }
         }
-
-        if (btn.checked) {
-            this._activeTool = toolId;
-        } else {
-            this._activeTool = null;
-        }
-
-        // Notify listeners (annotation overlay, beautify tools)
+        this._activeTool = btn.checked ? toolId : null;
         this._onToolChanged(this._activeTool);
     }
 
     _onToolChanged(toolId) {
-        // Can be connected externally via callback
         this._toolChangedCallback?.(toolId);
     }
 
-    /**
-     * Set an external callback for tool changes.
-     */
     onToolChanged(callback) {
         this._toolChangedCallback = callback;
     }
 
-    /**
-     * Programmatically select a tool by id (used by keyboard shortcuts).
-     * Pass null to deselect all → enters selection/move mode.
-     */
     selectTool(toolId) {
         if (toolId === null) {
-            // Deselect all
             for (const [, btn] of this._toolButtons)
                 btn.checked = false;
             this._activeTool = null;
             this._onToolChanged(null);
             return;
         }
-
         const btn = this._toolButtons.get(toolId);
         if (!btn) return;
-
-        // Deselect others
-        for (const [id, otherBtn] of this._toolButtons) {
+        for (const [id, otherBtn] of this._toolButtons)
             otherBtn.checked = (id === toolId);
-        }
         this._activeTool = toolId;
         this._onToolChanged(toolId);
     }
 
-    get activeTool() {
-        return this._activeTool;
-    }
+    get activeTool() { return this._activeTool; }
 
-    _cycleBrushSize() {
-        const sizes = [1, 2, 3, 5, 8, 12];
-        const current = parseInt(this._sizeButton.child.text) || 3;
-        const idx = sizes.indexOf(current);
-        const next = sizes[(idx + 1) % sizes.length];
-        this._sizeButton.child.text = String(next);
-    }
-
-    get brushSize() {
-        return parseInt(this._sizeButton.child.text) || 3;
-    }
-
-    _showColorPopup(target) {
-        // Remove existing popup
+    _showSizePopup() {
+        this._closeSizePopup();
         this._closeColorPopup();
 
-        this._colorPopup = new St.BoxLayout({
-            style_class: 'big-shot-color-popup',
-            style: 'background: rgba(30,30,30,0.95); border-radius: 8px; padding: 8px; ' +
-                   'border: 1px solid rgba(255,255,255,0.15);',
+        this._sizePopup = new St.BoxLayout({
+            style_class: 'big-shot-edit-popup',
             vertical: true,
             reactive: true,
         });
 
-        // Grid: 2 rows x 6 cols
+        // Grid row of preset sizes (1-14)
+        const row1 = new St.BoxLayout({ style_class: 'big-shot-edit-row' });
+        const row2 = new St.BoxLayout({ style_class: 'big-shot-edit-row' });
+        for (let i = 1; i <= 14; i++) {
+            const btn = new St.Button({
+                style_class: 'big-shot-edit-tool-btn',
+                can_focus: true,
+                child: new St.Label({
+                    text: String(i),
+                    style: 'color: #ffffff; font-size: 12px;',
+                    x_align: Clutter.ActorAlign.CENTER,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+            });
+            if (i === this.brushSize)
+                btn.add_style_pseudo_class('checked');
+            const size = i;
+            btn.connect('clicked', () => {
+                this._setBrushSize(size);
+                this._closeSizePopup();
+            });
+            if (i <= 7)
+                row1.add_child(btn);
+            else
+                row2.add_child(btn);
+        }
+        this._sizePopup.add_child(row1);
+        this._sizePopup.add_child(row2);
+
+        // Custom size entry row
+        const customRow = new St.BoxLayout({ style_class: 'big-shot-edit-row' });
+        const customEntry = new St.Entry({
+            hint_text: _('Custom'),
+            style: 'width: 60px; color: #ffffff; font-size: 12px;',
+            can_focus: true,
+        });
+        customEntry.clutter_text.connect('activate', () => {
+            const val = parseInt(customEntry.get_text());
+            if (val > 0 && val <= 100) {
+                this._setBrushSize(val);
+                this._closeSizePopup();
+            }
+        });
+        customRow.add_child(customEntry);
+        this._sizePopup.add_child(customRow);
+
+        // Position above the size button
+        this._ui.add_child(this._sizePopup);
+        const [bx, by] = this._sizeButton.get_transformed_position();
+        this._sizePopup.set_position(bx, by - this._sizePopup.height - 8);
+    }
+
+    _closeSizePopup() {
+        this._sizePopup?.destroy();
+        this._sizePopup = null;
+    }
+
+    _setBrushSize(size) {
+        this._sizeLabel.text = String(size);
+    }
+
+    get brushSize() {
+        return parseInt(this._sizeLabel.text) || 3;
+    }
+
+    _showColorPopup(target) {
+        this._closeColorPopup();
+
+        this._colorPopup = new St.BoxLayout({
+            style_class: 'big-shot-edit-popup',
+            vertical: true,
+            reactive: true,
+        });
+
         for (let row = 0; row < 2; row++) {
-            const rowBox = new St.BoxLayout({ vertical: false });
+            const rowBox = new St.BoxLayout({ style: 'spacing: 6px;' });
             for (let col = 0; col < 6; col++) {
                 const color = PALETTE[row * 6 + col];
                 const swatch = new St.Button({
-                    style: `background: ${color}; width: 24px; height: 24px; ` +
-                           'border-radius: 4px; margin: 2px;',
+                    style: `background: ${color}; width: 28px; height: 28px; border-radius: 8px; margin: 2px; border: 2px solid transparent;`,
                     reactive: true,
                     can_focus: true,
                     accessible_name: color,
@@ -285,13 +353,12 @@ export class PartToolbar extends PartUI {
             this._colorPopup.add_child(rowBox);
         }
 
-        // "No fill" button for fill target
         if (target === 'fill') {
             const noFillBtn = new St.Button({
-                style_class: 'screenshot-ui-show-pointer-button',
+                style_class: 'big-shot-edit-tool-btn',
                 label: _('No Fill'),
                 can_focus: true,
-                style: 'margin-top: 4px; font-size: 11px;',
+                style: 'margin-top: 4px; color: #ffffff;',
             });
             noFillBtn.connect('clicked', () => {
                 this._applyColor('fill', null);
@@ -300,21 +367,22 @@ export class PartToolbar extends PartUI {
             this._colorPopup.add_child(noFillBtn);
         }
 
-        // Position popup above the color button
         const anchor = target === 'fill' ? this._fillButton : this._colorButton;
         this._ui.add_child(this._colorPopup);
 
-        // Position near the button, clamped to screen bounds
-        const [bx, by] = anchor.get_transformed_position();
-        const monitor = global.display.get_current_monitor();
-        const monitorGeo = global.display.get_monitor_geometry(monitor);
-        let px = bx - 40;
-        let py = by - this._colorPopup.height - 8;
-        px = Math.max(monitorGeo.x, Math.min(px, monitorGeo.x + monitorGeo.width - this._colorPopup.width));
-        py = Math.max(monitorGeo.y, py);
-        this._colorPopup.set_position(px, py);
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            if (!this._colorPopup) return GLib.SOURCE_REMOVE;
+            const [bx, by] = anchor.get_transformed_position();
+            const monitor = global.display.get_current_monitor();
+            const geo = global.display.get_monitor_geometry(monitor);
+            let cpx = bx - 40;
+            let cpy = by - this._colorPopup.height - 8;
+            cpx = Math.max(geo.x, Math.min(cpx, geo.x + geo.width - this._colorPopup.width));
+            cpy = Math.max(geo.y, cpy);
+            this._colorPopup.set_position(cpx, cpy);
+            return GLib.SOURCE_REMOVE;
+        });
 
-        // Close on click outside (after slight delay to avoid immediate close)
         this._popupTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
             this._popupTimeoutId = 0;
             if (this._destroyed) return GLib.SOURCE_REMOVE;
@@ -329,19 +397,18 @@ export class PartToolbar extends PartUI {
     _applyColor(target, color) {
         if (target === 'stroke') {
             this._currentColorHex = color;
-            this._colorButton.child.set_style(
-                `background: ${color}; border-radius: 50%; width: 18px; height: 18px;`
+            this._colorSwatch.set_style(
+                `background: ${color}; border-radius: 50%; min-width: 24px; min-height: 24px; border: 2px solid rgba(255,255,255,0.3);`
             );
         } else {
             this._fillColorHex = color;
             if (color) {
-                this._fillButton.child.set_style(
-                    `background: ${color}; border-radius: 50%; width: 18px; height: 18px;`
+                this._fillSwatch.set_style(
+                    `background: ${color}; border-radius: 50%; min-width: 24px; min-height: 24px; border: 2px solid rgba(255,255,255,0.3);`
                 );
             } else {
-                this._fillButton.child.set_style(
-                    'background: transparent; border: 2px dashed rgba(255,255,255,0.5); ' +
-                    'border-radius: 50%; width: 18px; height: 18px;'
+                this._fillSwatch.set_style(
+                    'background: transparent; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; min-width: 24px; min-height: 24px;'
                 );
             }
         }
@@ -360,72 +427,90 @@ export class PartToolbar extends PartUI {
         this._colorPopup = null;
     }
 
-    get currentColor() {
-        return this._currentColorHex || '#ed333b';
+    get currentColor() { return this._currentColorHex || '#ed333b'; }
+    get fillColor() { return this._fillColorHex; }
+
+    _onUndo() { }
+    _onRedo() { }
+
+    _showTooltip(button, text) {
+        this._hideTooltip();
+        this._tooltip = new St.Label({
+            text,
+            style_class: 'big-shot-tooltip',
+            style: 'background: rgba(0,0,0,0.85); color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 11px;',
+        });
+        this._ui.add_child(this._tooltip);
+
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            if (!this._tooltip) return GLib.SOURCE_REMOVE;
+            const [bx, by] = button.get_transformed_position();
+            const bw = button.width;
+            const tw = this._tooltip.width;
+            this._tooltip.set_position(
+                bx + (bw - tw) / 2,
+                by - this._tooltip.height - 4
+            );
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
-    get fillColor() {
-        return this._fillColorHex;
-    }
-
-    _onUndo() {
-        // Will be connected to drawing overlay
-    }
-
-    _onRedo() {
-        // Will be connected to drawing overlay
+    _hideTooltip() {
+        if (this._tooltip) {
+            this._tooltip.destroy();
+            this._tooltip = null;
+        }
     }
 
     _onUIVisibilityChanged() {
         if (this._ui.visible) {
-            // Show toolbar only in screenshot mode (not cast)
-            if (!this._isCastMode) {
-                this._animateIn();
+            if (this._isCastMode) {
+                this._editButton.visible = false;
+                this._editButton.checked = false;
+                this._editMode = false;
+                this._editPanel.visible = false;
+            } else {
+                this._editButton.visible = true;
             }
         } else {
-            this._animateOut();
+            this._editButton.checked = false;
+            this._editMode = false;
+            this._editPanel.visible = false;
+            this.selectTool(null);
         }
     }
 
     _onModeChanged(isCast) {
         super._onModeChanged(isCast);
         if (isCast) {
-            this._animateOut();
+            this._editButton.visible = false;
+            this._editButton.checked = false;
+            this._editMode = false;
+            this._editPanel.visible = false;
+            this.selectTool(null);
         } else if (this._ui.visible) {
-            this._animateIn();
+            this._editButton.visible = true;
         }
-    }
-
-    _animateIn() {
-        this._container.visible = true;
-        this._container.opacity = 0;
-        this._container.ease({
-            opacity: 255,
-            duration: 200,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-        });
-    }
-
-    _animateOut() {
-        this._container.ease({
-            opacity: 0,
-            duration: 150,
-            mode: Clutter.AnimationMode.EASE_IN_QUAD,
-            onComplete: () => {
-                this._container.visible = false;
-            },
-        });
     }
 
     destroy() {
         this._closeColorPopup();
-        if (this._container) {
-            const parent = this._container.get_parent();
-            if (parent)
-                parent.remove_child(this._container);
-            this._container.destroy();
-            this._container = null;
+        this._closeSizePopup();
+        this._hideTooltip();
+
+        if (this._editButton) {
+            const p = this._editButton.get_parent();
+            if (p) p.remove_child(this._editButton);
+            this._editButton.destroy();
+            this._editButton = null;
         }
+        if (this._editPanel) {
+            const p = this._editPanel.get_parent();
+            if (p) p.remove_child(this._editPanel);
+            this._editPanel.destroy();
+            this._editPanel = null;
+        }
+
         this._toolButtons.clear();
         super.destroy();
     }

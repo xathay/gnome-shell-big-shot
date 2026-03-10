@@ -27,6 +27,7 @@ const TOOL_TO_MODE = {
     'text': DrawingMode.TEXT,
     'highlight': DrawingMode.HIGHLIGHTER,
     'censor': DrawingMode.CENSOR,
+    'blur': DrawingMode.BLUR,
     'number': DrawingMode.NUMBER,
     'select': DrawingMode.SELECT,
 };
@@ -51,55 +52,90 @@ export class DrawingOverlay {
     }
 
     _buildOverlay() {
-        // Create a transparent canvas actor that covers the screenshot area
-        this._canvas = new Clutter.Canvas();
-        this._actor = new Clutter.Actor({
-            reactive: true,
+        // Create a St.DrawingArea for Cairo rendering.
+        // Positioned between _areaSelector and _primaryMonitorBin in z-order:
+        //   - ABOVE _areaSelector: when reactive, captures drawing events
+        //   - BELOW _primaryMonitorBin: panel/close button still receive clicks
+        // Reactivity is toggled by setReactive() when a drawing tool is active.
+        this._actor = new St.DrawingArea({
+            reactive: false,
             x_expand: true,
             y_expand: true,
-            accessible_name: 'Drawing canvas',
+            accessible_name: _('Drawing canvas'),
         });
-        this._actor.set_content(this._canvas);
 
-        // Connect canvas draw
-        this._canvasDrawId = this._canvas.connect('draw', (canvas, cr, width, height) => {
+        // Connect repaint for Cairo drawing
+        this._repaintId = this._actor.connect('repaint', (area) => {
+            const cr = area.get_context();
+            const [width, height] = area.get_surface_size();
             this._onDraw(cr, width, height);
         });
 
-        // Connect input events
-        this._pressId = this._actor.connect('button-press-event', (actor, event) => {
+        // Direct event handlers on the actor.
+        // These fire when the actor is reactive and under the pointer.
+        // The GrabHelper in ScreenshotUI creates a ClutterGrab that blocks
+        // global.stage captured-event, so we must use direct event handlers.
+        this._actor.connect('button-press-event', (_actor, event) => {
             return this._onButtonPress(event);
         });
-        this._releaseId = this._actor.connect('button-release-event', (actor, event) => {
+        this._actor.connect('button-release-event', (_actor, event) => {
             return this._onButtonRelease(event);
         });
-        this._motionId = this._actor.connect('motion-event', (actor, event) => {
+        this._actor.connect('motion-event', (_actor, event) => {
             return this._onMotion(event);
         });
 
-        // Key events for shortcuts
-        this._keyId = this._actor.connect('key-press-event', (actor, event) => {
+        // Key events for shortcuts (connected to the UI itself)
+        this._keyId = this._ui.connect('key-press-event', (actor, event) => {
+            if (!this._actor?.visible) return Clutter.EVENT_PROPAGATE;
             return this._onKeyPress(event);
         });
 
         // Initially hidden
         this._actor.visible = false;
 
-        // Add to screenshot UI
+        // Insert BELOW _primaryMonitorBin (which contains panel/close button)
+        // and ABOVE _areaSelector (the selection handles).
         if (this._ui) {
-            this._ui.add_child(this._actor);
+            const primaryBin = this._ui._primaryMonitorBin;
+            if (primaryBin?.get_parent() === this._ui) {
+                this._ui.insert_child_below(this._actor, primaryBin);
+            } else {
+                this._ui.add_child(this._actor);
+            }
         }
     }
 
     show(width, height) {
         this._actor.set_size(width, height);
-        this._canvas.set_size(width, height);
         this._actor.visible = true;
-        this._canvas.invalidate();
+        this._actor.queue_repaint();
     }
 
     hide() {
         this._actor.visible = false;
+    }
+
+    /**
+     * Enable/disable event capture for drawing.
+     * Toggles the actor's reactivity so it captures mouse events directly.
+     * When reactive, the actor (positioned above _areaSelector but below
+     * _primaryMonitorBin) intercepts clicks for drawing; the native panel
+     * and close button remain clickable since they're in a higher z-layer.
+     */
+    setReactive(active) {
+        if (this._actor) {
+            this._actor.reactive = active;
+        }
+        if (!active) {
+            // Reset drawing state when deactivating
+            this._isDrawing = false;
+            this._currentStroke = null;
+            this._startPoint = null;
+            this._currentEndPoint = null;
+            this._isDragging = false;
+            this._dragStart = null;
+        }
     }
 
     _getOptions() {
@@ -149,8 +185,9 @@ export class DrawingOverlay {
         const [x, y] = event.get_coords();
         const [ix, iy] = this._toImageCoords(x, y);
 
-        // Selection mode: no tool active → select/move objects
-        if (!this._toolbar?.activeTool) {
+        // Selection mode: no tool active or select tool → select/move objects
+        const isSelectMode = !this._toolbar?.activeTool || this._toolbar.activeTool === 'select';
+        if (isSelectMode) {
             // Try to find an action under the cursor (top-most first)
             let found = null;
             for (let i = this._actions.length - 1; i >= 0; i--) {
@@ -164,9 +201,11 @@ export class DrawingOverlay {
             if (found) {
                 this._isDragging = true;
                 this._dragStart = [ix, iy];
+                this._actor.queue_repaint();
+                return Clutter.EVENT_STOP;
             }
-            this._canvas.invalidate();
-            return Clutter.EVENT_STOP;
+            this._actor.queue_repaint();
+            return Clutter.EVENT_PROPAGATE;
         }
 
         // Drawing mode
@@ -191,18 +230,21 @@ export class DrawingOverlay {
             const dy = iy - this._dragStart[1];
             this._selectedAction.translate(dx, dy);
             this._dragStart = [ix, iy];
-            this._canvas.invalidate();
+            this._actor.queue_repaint();
             return Clutter.EVENT_STOP;
         }
 
-        if (!this._isDrawing) return Clutter.EVENT_PROPAGATE;
+        if (!this._isDrawing) return Clutter.EVENT_STOP;
 
         const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
 
         if ((mode === DrawingMode.PEN || mode === DrawingMode.HIGHLIGHTER) && this._currentStroke) {
             this._currentStroke.push([ix, iy]);
-            this._canvas.invalidate();
         }
+
+        // Track current endpoint for all modes (needed for live shape preview)
+        this._currentEndPoint = [ix, iy];
+        this._actor.queue_repaint();
 
         return Clutter.EVENT_STOP;
     }
@@ -215,7 +257,7 @@ export class DrawingOverlay {
             return Clutter.EVENT_STOP;
         }
 
-        if (!this._isDrawing) return Clutter.EVENT_PROPAGATE;
+        if (!this._isDrawing) return Clutter.EVENT_STOP;
 
         const [x, y] = event.get_coords();
         const [ix, iy] = this._toImageCoords(x, y);
@@ -263,6 +305,11 @@ export class DrawingOverlay {
                     start: this._startPoint, end: [ix, iy]
                 }, options);
                 break;
+            case DrawingMode.BLUR:
+                action = createAction(DrawingMode.BLUR, {
+                    start: this._startPoint, end: [ix, iy]
+                }, options);
+                break;
             case DrawingMode.TEXT:
                 // Show text entry popover instead of hardcoded text
                 this._showTextPopover(this._startPoint, options);
@@ -286,7 +333,8 @@ export class DrawingOverlay {
         this._isDrawing = false;
         this._currentStroke = null;
         this._startPoint = null;
-        this._canvas.invalidate();
+        this._currentEndPoint = null;
+        this._actor.queue_repaint();
 
         return Clutter.EVENT_STOP;
     }
@@ -315,16 +363,16 @@ export class DrawingOverlay {
                 if (idx >= 0) {
                     this._undoStack.push(this._actions.splice(idx, 1)[0]);
                     this._selectedAction = null;
-                    this._canvas.invalidate();
+                    this._actor.queue_repaint();
                 }
             } else if (this._actions.length > 0) {
                 this._undoStack.push(this._actions.pop());
-                this._canvas.invalidate();
+                this._actor.queue_repaint();
             }
             return Clutter.EVENT_STOP;
         }
 
-        // Keyboard tool shortcuts: 1-9 → tools, 0 or S → select mode
+        // Keyboard tool shortcuts
         const TOOL_KEYS = {
             [Clutter.KEY_1]: 'pen',
             [Clutter.KEY_2]: 'arrow',
@@ -335,6 +383,7 @@ export class DrawingOverlay {
             [Clutter.KEY_7]: 'highlight',
             [Clutter.KEY_8]: 'censor',
             [Clutter.KEY_9]: 'number',
+            [Clutter.KEY_b]: 'blur',
         };
 
         if (!ctrl && !shift && TOOL_KEYS[key]) {
@@ -352,7 +401,7 @@ export class DrawingOverlay {
         if (key === Clutter.KEY_Escape) {
             if (this._selectedAction) {
                 this._selectedAction = null;
-                this._canvas.invalidate();
+                this._actor.queue_repaint();
                 return Clutter.EVENT_STOP;
             }
         }
@@ -401,7 +450,7 @@ export class DrawingOverlay {
                 if (action) {
                     this._actions.push(action);
                     this._undoStack = [];
-                    this._canvas.invalidate();
+                    this._actor.queue_repaint();
                 }
             }
             this._closeTextPopover();
@@ -444,6 +493,9 @@ export class DrawingOverlay {
         this._textPopover?.destroy();
         this._textPopover = null;
         this._textEntry = null;
+
+        // Return focus to the screenshot UI so Enter key works for capture
+        this._ui?.grab_key_focus();
     }
 
     // =========================================================================
@@ -453,13 +505,13 @@ export class DrawingOverlay {
     undo() {
         if (this._actions.length === 0) return;
         this._undoStack.push(this._actions.pop());
-        this._canvas.invalidate();
+        this._actor.queue_repaint();
     }
 
     redo() {
         if (this._undoStack.length === 0) return;
         this._actions.push(this._undoStack.pop());
-        this._canvas.invalidate();
+        this._actor.queue_repaint();
     }
 
     // =========================================================================
@@ -483,18 +535,40 @@ export class DrawingOverlay {
             cr.restore();
         }
 
-        // Draw current in-progress stroke
-        if (this._isDrawing && this._currentStroke && this._currentStroke.length > 1) {
+        // Draw current in-progress action (live preview while dragging)
+        if (this._isDrawing && this._startPoint) {
             const options = this._getOptions();
             const mode = TOOL_TO_MODE[this._toolbar.activeTool] || DrawingMode.PEN;
             let tempAction;
+            const end = this._currentEndPoint || this._startPoint;
 
-            if (mode === DrawingMode.PEN) {
-                tempAction = createAction(DrawingMode.PEN, { stroke: this._currentStroke }, options);
-            } else if (mode === DrawingMode.HIGHLIGHTER) {
-                tempAction = createAction(DrawingMode.HIGHLIGHTER, {
-                    stroke: this._currentStroke, shift: false
-                }, options);
+            switch (mode) {
+                case DrawingMode.PEN:
+                    if (this._currentStroke?.length > 1)
+                        tempAction = createAction(DrawingMode.PEN, { stroke: this._currentStroke }, options);
+                    break;
+                case DrawingMode.HIGHLIGHTER:
+                    if (this._currentStroke?.length > 1)
+                        tempAction = createAction(DrawingMode.HIGHLIGHTER, { stroke: this._currentStroke, shift: false }, options);
+                    break;
+                case DrawingMode.ARROW:
+                    tempAction = createAction(DrawingMode.ARROW, { start: this._startPoint, end, shift: false }, options);
+                    break;
+                case DrawingMode.LINE:
+                    tempAction = createAction(DrawingMode.LINE, { start: this._startPoint, end, shift: false }, options);
+                    break;
+                case DrawingMode.RECT:
+                    tempAction = createAction(DrawingMode.RECT, { start: this._startPoint, end, shift: false }, options);
+                    break;
+                case DrawingMode.CIRCLE:
+                    tempAction = createAction(DrawingMode.CIRCLE, { start: this._startPoint, end, shift: false }, options);
+                    break;
+                case DrawingMode.CENSOR:
+                    tempAction = createAction(DrawingMode.CENSOR, { start: this._startPoint, end }, options);
+                    break;
+                case DrawingMode.BLUR:
+                    tempAction = createAction(DrawingMode.BLUR, { start: this._startPoint, end }, options);
+                    break;
             }
 
             if (tempAction) {
@@ -544,21 +618,25 @@ export class DrawingOverlay {
         this._actions = [];
         this._undoStack = [];
         this._nextNumber = 1;
-        this._canvas.invalidate();
+        this._actor.queue_repaint();
     }
 
     destroy() {
         this._closeTextPopover();
-        if (this._canvasDrawId) {
-            this._canvas.disconnect(this._canvasDrawId);
+
+        // Ensure overlay is no longer reactive
+        if (this._actor)
+            this._actor.reactive = false;
+
+        if (this._repaintId) {
+            this._actor.disconnect(this._repaintId);
         }
-        if (this._pressId) this._actor.disconnect(this._pressId);
-        if (this._releaseId) this._actor.disconnect(this._releaseId);
-        if (this._motionId) this._actor.disconnect(this._motionId);
-        if (this._keyId) this._actor.disconnect(this._keyId);
+        if (this._keyId) {
+            this._ui.disconnect(this._keyId);
+            this._keyId = 0;
+        }
 
         this._actor?.destroy();
         this._actor = null;
-        this._canvas = null;
     }
 }

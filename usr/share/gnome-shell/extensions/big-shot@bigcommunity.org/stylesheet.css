@@ -5,57 +5,49 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-/* ===== Main Toolbar ===== */
-.big-shot-toolbar {
-    background-color: rgba(30, 30, 30, 0.92);
+/* ===== Floating Edit Panel ===== */
+.big-shot-edit-popup {
+    background-color: rgba(30, 30, 30, 0.95);
     border-radius: 14px;
-    padding: 4px 8px;
-    margin-bottom: 8px;
-    spacing: 2px;
+    padding: 8px 12px;
+    spacing: 6px;
+    color: #ffffff;
 }
 
-.big-shot-toolbar-section {
-    spacing: 2px;
+.big-shot-edit-row {
+    spacing: 4px;
 }
 
-/* ===== Tool Buttons ===== */
-.big-shot-tool-button {
+.big-shot-edit-tool-btn {
     border-radius: 10px;
-    padding: 6px 8px;
-    min-width: 32px;
-    min-height: 32px;
+    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    color: #ffffff;
 }
 
-.big-shot-tool-button:hover {
+.big-shot-edit-tool-btn StIcon {
+    color: #ffffff;
+    -st-icon-style: symbolic;
+}
+
+.big-shot-edit-tool-btn:hover {
     background-color: rgba(255, 255, 255, 0.12);
 }
 
-.big-shot-tool-button:checked {
-    background-color: rgba(255, 255, 255, 0.20);
+.big-shot-edit-tool-btn:checked {
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.big-shot-tool-button:focus {
+.big-shot-edit-tool-btn:focus {
     background-color: rgba(255, 255, 255, 0.15);
 }
 
-/* ===== Separator ===== */
-.big-shot-separator {
+.big-shot-edit-sep {
     width: 1px;
     background-color: rgba(255, 255, 255, 0.15);
-    margin: 6px 4px;
-}
-
-/* ===== Color Button ===== */
-.big-shot-color-button {
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    margin: 4px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.big-shot-color-button:hover {
-    border-color: rgba(255, 255, 255, 0.6);
+    margin: 4px 6px;
 }
 
 /* ===== Audio Toggle Buttons ===== */

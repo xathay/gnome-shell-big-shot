@@ -10,6 +10,7 @@
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import { PartUI } from './partbase.js';
 import { GRADIENTS } from '../data/gradients.js';
@@ -33,6 +34,8 @@ export class PartGradient extends PartUI {
     _buildPicker() {
         this._picker = new St.BoxLayout({
             style_class: 'screenshot-ui-type-button-container',
+            style: 'background-color: rgba(30, 30, 30, 0.95); border-radius: 14px; ' +
+                'padding: 4px;',
             vertical: false,
             visible: false,
             reactive: true,
@@ -107,14 +110,9 @@ export class PartGradient extends PartUI {
         if (this._swatches[this._selected])
             this._swatches[this._selected].checked = true;
 
-        // Insert into the native bottom area group for proper layout integration
+        // Add directly to screenshotUI — positioned manually above the toolbar
         if (this._ui) {
-            const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
-            if (bottomGroup) {
-                bottomGroup.insert_child_at_index(this._picker, 0);
-            } else {
-                this._ui.add_child(this._picker);
-            }
+            this._ui.add_child(this._picker);
         }
     }
 
@@ -158,6 +156,32 @@ export class PartGradient extends PartUI {
 
     setVisible(visible) {
         this._picker.visible = visible;
+        if (visible) {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                this._repositionPicker();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+    }
+
+    /**
+     * Position the gradient picker above the annotation toolbar,
+     * or above the native bottom area if the toolbar is not visible.
+     */
+    _repositionPicker() {
+        if (!this._picker?.visible) return;
+
+        // Position above the native panel
+        const panel = this._ui._panel;
+        if (!panel) return;
+        const [bgX, bgY] = panel.get_transformed_position();
+        const bgW = panel.width;
+        const pw = this._picker.width;
+        const ph = this._picker.height;
+        this._picker.set_position(
+            bgX + (bgW - pw) / 2,
+            bgY - ph - 8
+        );
     }
 
     destroy() {

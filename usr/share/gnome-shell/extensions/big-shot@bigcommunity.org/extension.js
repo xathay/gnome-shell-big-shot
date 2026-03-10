@@ -6,14 +6,18 @@
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import GdkPixbuf from 'gi://GdkPixbuf';
+import cairo from 'gi://cairo';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Screenshot from 'resource:///org/gnome/shell/ui/screenshot.js';
 
 // Parts
 import { PartToolbar } from './parts/parttoolbar.js';
 import { PartAnnotation } from './parts/partannotation.js';
-import { PartGradient } from './parts/partgradient.js';
-import { PartCrop } from './parts/partcrop.js';
+
 import { PartAudio } from './parts/partaudio.js';
 import { PartFramerate } from './parts/partframerate.js';
 import { PartDownsize } from './parts/partdownsize.js';
@@ -240,6 +244,16 @@ export default class BigShotExtension extends Extension {
         // Monkey-patch screencast proxy
         this._patchScreencast();
 
+        // Force-enable the screencast (video) button.
+        // GNOME 49 has a bug where Gst.init_check(null) crashes the native
+        // screencast service, hiding the cast button even when GStreamer
+        // encoders are available. Since Big Shot provides its own pipelines,
+        // force the button visible so users can switch to video mode.
+        this._forceEnableScreencast();
+
+        // Intercept _saveScreenshot to composite annotations onto the image
+        this._patchSaveScreenshot();
+
         // Initialize translations
         this.initTranslations();
 
@@ -260,10 +274,329 @@ export default class BigShotExtension extends Extension {
         // Revert monkey-patches
         this._unpatchScreencast();
 
+        // Revert force-enabled screencast button
+        this._revertForceScreencast();
+
+        // Revert save screenshot intercept
+        this._unpatchSaveScreenshot();
+
         this._screenshotUI = null;
         this._availableConfigs = null;
 
         console.debug('[Big Shot] Extension disabled');
+    }
+
+    _forceEnableScreencast() {
+        const ui = this._screenshotUI;
+        if (!ui) return;
+
+        // Save original state and method
+        this._origScreencastSupported = ui._screencastSupported;
+        this._origSyncCastButton = ui._syncCastButton?.bind(ui);
+
+        // Force screencast as supported
+        ui._screencastSupported = true;
+
+        // Override _syncCastButton to always keep _screencastSupported = true.
+        // The native screencast proxy callback sets _screencastSupported = false
+        // asynchronously when the screencast service crashes (GNOME 49 bug),
+        // which would hide the cast button after our force-enable.
+        if (typeof ui._syncCastButton === 'function') {
+            ui._syncCastButton = () => {
+                ui._screencastSupported = true;
+                this._origSyncCastButton();
+            };
+            ui._syncCastButton();
+        } else {
+            const castBtn = ui._castButton;
+            if (castBtn) {
+                castBtn.visible = true;
+                castBtn.reactive = true;
+            }
+        }
+
+        console.debug('[Big Shot] Screencast button force-enabled');
+    }
+
+    _revertForceScreencast() {
+        const ui = this._screenshotUI;
+        if (!ui) return;
+
+        // Restore original _syncCastButton method
+        if (this._origSyncCastButton) {
+            ui._syncCastButton = this._origSyncCastButton;
+            this._origSyncCastButton = undefined;
+        }
+
+        if (this._origScreencastSupported !== undefined) {
+            ui._screencastSupported = this._origScreencastSupported;
+            if (typeof ui._syncCastButton === 'function')
+                ui._syncCastButton();
+            this._origScreencastSupported = undefined;
+        }
+    }
+
+    // =========================================================================
+    // SAVE SCREENSHOT — Composite annotations onto the screenshot
+    // =========================================================================
+
+    _patchSaveScreenshot() {
+        const ui = this._screenshotUI;
+        if (!ui || typeof ui._saveScreenshot !== 'function') return;
+
+        this._origSaveScreenshot = ui._saveScreenshot.bind(ui);
+        const ext = this;
+
+        ui._saveScreenshot = async function () {
+            console.log('[Big Shot] _saveScreenshot called');
+            const overlay = ext._annotation?._overlay;
+            const actions = overlay?._actions;
+            console.log(`[Big Shot] overlay=${!!overlay}, actions=${actions?.length ?? 'null'}`);
+
+            // No annotations — use original save
+            if (!actions || actions.length === 0) {
+                console.log('[Big Shot] No annotations, using original save');
+                return ext._origSaveScreenshot();
+            }
+
+            // --- Capture the original screenshot as PNG bytes ---
+            let texture, geometry, cursorTexture, cursorX, cursorY, cursorScale, bufScale;
+
+            if (this._selectionButton.checked || this._screenButton.checked) {
+                const content = this._stageScreenshot.get_content();
+                if (!content) return;
+
+                texture = content.get_texture();
+                geometry = this._getSelectedGeometry(true);
+                bufScale = this._scale;
+
+                cursorTexture = this._cursor.content?.get_texture();
+                if (!this._cursor.visible)
+                    cursorTexture = null;
+                cursorX = this._cursor.x * bufScale;
+                cursorY = this._cursor.y * bufScale;
+                cursorScale = this._cursorScale;
+            } else if (this._windowButton.checked) {
+                const window =
+                    this._windowSelectors.flatMap(s => s.windows())
+                        .find(win => win.checked);
+                if (!window) return;
+
+                const content = window.windowContent;
+                if (!content) return;
+
+                texture = content.get_texture();
+                geometry = null;
+                bufScale = window.bufferScale;
+                cursorTexture = window.getCursorTexture()?.get_texture();
+                if (!this._cursor.visible)
+                    cursorTexture = null;
+                cursorX = window.cursorPoint.x * bufScale;
+                cursorY = window.cursorPoint.y * bufScale;
+                cursorScale = this._cursorScale;
+            }
+
+            if (!texture) return;
+
+            const [gx, gy, gw, gh] = geometry ?? [0, 0, -1, -1];
+
+            // Composite original screenshot to stream (same as native)
+            const stream = Gio.MemoryOutputStream.new_resizable();
+            const pixbuf = await Shell.Screenshot.composite_to_stream(
+                texture, gx, gy, gw, gh, bufScale,
+                cursorTexture ?? null, cursorX ?? 0, cursorY ?? 0, cursorScale ?? 1,
+                stream
+            );
+            stream.close(null);
+
+            if (!pixbuf) {
+                return ext._origSaveScreenshot();
+            }
+
+            // --- Render annotations onto the screenshot via Cairo ---
+            const imgW = pixbuf.get_width();
+            const imgH = pixbuf.get_height();
+
+            // Geometry offset: annotations are in monitor coords (full screen),
+            // the captured image starts at (gx/bufScale, gy/bufScale).
+            const offsetX = gx / bufScale;
+            const offsetY = gy / bufScale;
+
+            // Use a temp file approach: pixbuf → PNG → Cairo surface → draw → PNG → pixbuf
+            const tmpDir = GLib.get_tmp_dir();
+            const tmpBase = GLib.build_filenamev([tmpDir, `bigshot-base-${Date.now()}.png`]);
+            const tmpAnnotated = GLib.build_filenamev([tmpDir, `bigshot-ann-${Date.now()}.png`]);
+
+            try {
+                // Coordinate transform for annotations
+                const toWidget = (x, y) => [
+                    (x - offsetX) * bufScale,
+                    (y - offsetY) * bufScale,
+                ];
+                const drawScale = 1.0;
+
+                // 1. Apply pixel-manipulating effects (pixelate, blur)
+                // on the GdkPixbuf before converting to Cairo surface
+                let workPixbuf = pixbuf;
+                for (const action of actions) {
+                    if (typeof action.drawReal === 'function') {
+                        try {
+                            const result = action.drawReal(
+                                workPixbuf, GdkPixbuf, GLib, toWidget, drawScale
+                            );
+                            if (result) {
+                                workPixbuf = result;
+                                console.log(`[Big Shot] drawReal applied: ${action.constructor.name}`);
+                            } else {
+                                console.log(`[Big Shot] drawReal returned null: ${action.constructor.name}`);
+                            }
+                        } catch (err) {
+                            console.error(`[Big Shot] drawReal failed for ${action.constructor.name}: ${err.message}\n${err.stack}`);
+                        }
+                    }
+                }
+
+                // 2. Save (possibly modified) pixbuf as PNG
+                workPixbuf.savev(tmpBase, 'png', [], []);
+
+                // 3. Load as Cairo ImageSurface
+                const surface = cairo.ImageSurface.createFromPNG(tmpBase);
+                const cr = new cairo.Context(surface);
+
+                // 4. Draw all normal annotations (pen, arrow, text, etc.)
+                for (const action of actions) {
+                    if (typeof action.drawReal !== 'function') {
+                        cr.save();
+                        action.draw(cr, toWidget, drawScale);
+                        cr.restore();
+                    }
+                }
+
+                // 5. Save annotated surface as PNG
+                surface.writeToPNG(tmpAnnotated);
+                surface.finish();
+
+                // 5. Load annotated PNG as pixbuf for clipboard + file save
+                const annotPixbuf = GdkPixbuf.Pixbuf.new_from_file(tmpAnnotated);
+
+                // 6. Play sound
+                global.display.get_sound_player().play_from_theme(
+                    'screen-capture', _('Screenshot taken'), null);
+
+                // 7. Store to clipboard + file
+                const finalBytes = ext._pixbufToBytes(annotPixbuf);
+                const resultFile = ext._storeScreenshotBytes(finalBytes, annotPixbuf);
+
+                if (resultFile)
+                    this.emit('screenshot-taken', resultFile);
+
+            } catch (e) {
+                console.error(`[Big Shot] Annotation compositing failed: ${e.message}`);
+                // Fallback: save without annotations
+                global.display.get_sound_player().play_from_theme(
+                    'screen-capture', _('Screenshot taken'), null);
+                const bytes = stream.steal_as_bytes();
+                const resultFile = ext._storeScreenshotBytes(bytes, pixbuf);
+                if (resultFile)
+                    this.emit('screenshot-taken', resultFile);
+            } finally {
+                // Clean up temp files
+                try { Gio.File.new_for_path(tmpBase).delete(null); } catch (_e) { /* ignore */ }
+                try { Gio.File.new_for_path(tmpAnnotated).delete(null); } catch (_e) { /* ignore */ }
+            }
+        };
+
+        console.log('[Big Shot] _saveScreenshot intercepted for annotation compositing');
+    }
+
+    /**
+     * Convert a GdkPixbuf.Pixbuf to PNG GLib.Bytes
+     */
+    _pixbufToBytes(pixbuf) {
+        const [ok, buffer] = pixbuf.save_to_bufferv('png', [], []);
+        if (!ok) throw new Error('Failed to save pixbuf to buffer');
+        return GLib.Bytes.new(buffer);
+    }
+
+    /**
+     * Store screenshot to clipboard + file (mirrors GNOME's _storeScreenshot)
+     */
+    _storeScreenshotBytes(bytes, pixbuf) {
+        // Clipboard
+        const clipboard = St.Clipboard.get_default();
+        clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+
+        const time = GLib.DateTime.new_now_local();
+        let file = null;
+
+        const lockdownSettings =
+            new Gio.Settings({ schema_id: 'org.gnome.desktop.lockdown' });
+        const disableSaveToDisk =
+            lockdownSettings.get_boolean('disable-save-to-disk');
+
+        if (!disableSaveToDisk) {
+            const dir = Gio.File.new_for_path(GLib.build_filenamev([
+                GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) || GLib.get_home_dir(),
+                _('Screenshots'),
+            ]));
+
+            try {
+                dir.make_directory_with_parents(null);
+            } catch (e) {
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                    throw e;
+            }
+
+            const baseName = _('Screenshot from %s').format(
+                time.format('%Y-%m-%d %H-%M-%S'));
+
+            function* suffixes() {
+                yield '';
+                for (let i = 1; ; i++)
+                    yield `-${i}`;
+            }
+
+            for (const suffix of suffixes()) {
+                file = dir.get_child(`${baseName}${suffix}.png`);
+                try {
+                    const stream = file.create(Gio.FileCreateFlags.NONE, null);
+                    stream.write_bytes(bytes, null);
+                    stream.close(null);
+                    break;
+                } catch (e) {
+                    if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS))
+                        throw e;
+                    file = null;
+                }
+            }
+
+            if (file) {
+                // Add to recent files
+                try {
+                    const recentFile = GLib.build_filenamev([
+                        GLib.get_user_data_dir(), 'recently-used.xbel']);
+                    const uri = file.get_uri();
+                    const bookmarks = new GLib.BookmarkFile();
+                    try {
+                        bookmarks.load_from_file(recentFile);
+                    } catch (_e) { /* ignore if file doesn't exist */ }
+                    bookmarks.add_application(uri, GLib.get_prgname(), 'gio open %u');
+                    bookmarks.to_file(recentFile);
+                } catch (_e) { /* ignore */ }
+            }
+        }
+
+        return file;
+    }
+
+    _unpatchSaveScreenshot() {
+        const ui = this._screenshotUI;
+        if (!ui) return;
+
+        if (this._origSaveScreenshot) {
+            ui._saveScreenshot = this._origSaveScreenshot;
+            this._origSaveScreenshot = undefined;
+        }
     }
 
     _detectPipelines() {
@@ -324,33 +657,15 @@ export default class BigShotExtension extends Extension {
         this._annotation = new PartAnnotation(ui, ext);
         this._parts.push(this._annotation);
 
-        // Gradient — background gradient picker
-        this._gradient = new PartGradient(ui, ext);
-        this._parts.push(this._gradient);
-
-        // Crop — crop with padding
-        this._crop = new PartCrop(ui, ext);
-        this._parts.push(this._crop);
-
-        // Wire toolbar tool changes to beautify parts
+        // Wire toolbar tool changes to overlay reactivity
         this._toolbar.onToolChanged((toolId) => {
-            // Gradient picker: show when 'gradient' is active
-            this._gradient.setVisible(toolId === 'gradient');
-
-            // Crop: activate/deactivate when 'crop' is active
-            if (toolId === 'crop') {
-                const monitor = global.display.get_current_monitor();
-                const rect = global.display.get_monitor_geometry(monitor);
-                this._crop.activate(rect.width, rect.height);
-            } else {
-                this._crop.deactivate();
-            }
-
-            // Padding: cycle padding when 'padding' is clicked
-            if (toolId === 'padding') {
-                this._crop.cyclePadding();
-                // Deselect padding button (acts as action, not toggle)
-                this._toolbar.selectTool(null);
+            // Toggle drawing overlay reactivity: only capture events when
+            // a drawing tool is active (pen, arrow, line, etc.).
+            // No-tool mode must let events pass through to native screenshot controls.
+            const overlay = this._annotation?._overlay;
+            if (overlay) {
+                const isDrawTool = toolId !== null;
+                overlay.setReactive(isDrawTool);
             }
         });
 

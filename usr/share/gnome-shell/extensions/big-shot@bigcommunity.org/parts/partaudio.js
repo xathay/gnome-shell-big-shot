@@ -4,64 +4,63 @@
  * Adds toggle buttons for desktop audio and microphone capture.
  * Uses PulseAudio via Gvc.MixerControl to detect audio devices.
  *
+ * Based on gnome-shell-screencast-extra-feature approach:
+ * buttons are injected into the native _typeButtonContainer.
+ *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
 import Gvc from 'gi://Gvc';
 import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 
+import * as Screenshot from 'resource:///org/gnome/shell/ui/screenshot.js';
+
 import { PartUI } from './partbase.js';
 
-// =============================================================================
-// IconLabelButton — Toggle button with icon and label
-// =============================================================================
+/**
+ * A Clutter constraint to snap allocation to pixel boundaries.
+ * Resolves sub-pixel positioning on some displays.
+ */
+const PixelConstraint = GObject.registerClass(
+    class PixelConstraint extends Clutter.Constraint {
+        vfunc_update_allocation(_actor, allocation) {
+            allocation.x1 = Math.ceil(allocation.x1);
+            allocation.y1 = Math.ceil(allocation.y1);
+            allocation.x2 = Math.floor(allocation.x2);
+            allocation.y2 = Math.floor(allocation.y2);
+        }
+    });
 
-class IconLabelButton {
-    constructor(iconName, label, accessible) {
-        this.active = false;
+/**
+ * Icon+Label button matching the native GNOME screenshot UI style.
+ * Uses Gio.FileIcon for custom SVG icons from the extension.
+ */
+const IconLabelButton = GObject.registerClass(
+    class IconLabelButton extends St.Button {
+        _init(icon, label, params) {
+            super._init(params);
 
-        this._box = new St.BoxLayout({
-            vertical: false,
-            style: 'spacing: 6px;',
+        this._container = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            style_class: 'icon-label-button-container',
         });
+        this.set_child(this._container);
 
-        this._icon = new St.Icon({
-            icon_name: iconName,
-            icon_size: 16,
-        });
+        this._container.add_child(new St.Icon({ gicon: icon }));
 
-        this._label = new St.Label({
+        const labelActor = new St.Label({
             text: label,
-            y_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.CENTER,
         });
-
-        this._box.add_child(this._icon);
-        this._box.add_child(this._label);
-
-        this.button = new St.Button({
-            style_class: 'screenshot-ui-type-button',
-            toggle_mode: true,
-            can_focus: true,
-            child: this._box,
-            accessible_name: accessible || label,
-        });
-
-        this.button.connect('notify::checked', () => {
-            this.active = this.button.checked;
-        });
-    }
-
-    setTooltip(text) {
-        this.button.set_accessible_name(text);
-    }
-
-    destroy() {
-        this.button?.destroy();
-    }
-}
+            this.set({ labelActor });
+            this._container.add_child(labelActor);
+        }
+    });
 
 // =============================================================================
 // PartAudio — Desktop + Mic audio capture
@@ -73,47 +72,66 @@ export class PartAudio extends PartUI {
 
         this._desktopDevice = null;
         this._micDevice = null;
+        this._iconsDir = extension.dir.get_child('data').get_child('icons');
 
         // Initialize audio mixer
         this._mixer = new Gvc.MixerControl({ name: 'Big Shot Audio' });
         this._mixer.open();
 
-        // Wait for mixer to be ready
         this._mixerReadyId = this._mixer.connect('state-changed', () => {
-            if (this._mixer.get_state() === Gvc.MixerControlState.READY) {
+            if (this._mixer.get_state() === Gvc.MixerControlState.READY)
                 this._onMixerReady();
-            }
         });
 
-        // Create UI buttons
         this._createButtons();
     }
 
     _createButtons() {
+        const typeContainer = this._ui._typeButtonContainer;
+        if (!typeContainer) return;
+
         // Desktop audio button
-        this._desktopBtn = new IconLabelButton(
-            'audio-speakers-symbolic',
-            _('Desktop Audio'),
-            _('Record Desktop Audio')
+        this._desktopButton = new IconLabelButton(
+            new Gio.FileIcon({ file: this._iconsDir.get_child('screenshot-ui-speaker-symbolic.svg') }),
+            _('Desktop'),
+            {
+                constraints: new PixelConstraint(),
+                style_class: 'screenshot-ui-type-button',
+                toggle_mode: true,
+                reactive: false,
+            }
         );
 
         // Mic button
-        this._micBtn = new IconLabelButton(
-            'audio-input-microphone-symbolic',
-            _('Microphone'),
-            _('Record Microphone')
+        this._micButton = new IconLabelButton(
+            new Gio.FileIcon({ file: this._iconsDir.get_child('screenshot-ui-mic-symbolic.svg') }),
+            _('Mic'),
+            {
+                constraints: new PixelConstraint(),
+                style_class: 'screenshot-ui-type-button',
+                toggle_mode: true,
+                reactive: false,
+            }
         );
 
-        // Add buttons to the native type button container (same as Selection/Screen/Window)
-        const typeContainer = this._ui._typeButtonContainer;
-        if (typeContainer) {
-            typeContainer.add_child(this._desktopBtn.button);
-            typeContainer.add_child(this._micBtn.button);
-        }
+        typeContainer.add_child(this._desktopButton);
+        typeContainer.add_child(this._micButton);
 
-        // Only visible in cast mode
-        this._desktopBtn.button.visible = false;
-        this._micBtn.button.visible = false;
+        // Add tooltips
+        this._desktopTooltip = new Screenshot.Tooltip(this._desktopButton, {
+            style_class: 'screenshot-ui-tooltip',
+            visible: false,
+        });
+        this._micTooltip = new Screenshot.Tooltip(this._micButton, {
+            style_class: 'screenshot-ui-tooltip',
+            visible: false,
+        });
+        this._ui.add_child(this._desktopTooltip);
+        this._ui.add_child(this._micTooltip);
+
+        // Initially not visible and not reactive
+        this._desktopButton.visible = false;
+        this._micButton.visible = false;
     }
 
     _disconnectMixer() {
@@ -129,41 +147,32 @@ export class PartAudio extends PartUI {
     }
 
     _updateDevices() {
-        // Get default output (desktop audio)
         const defaultSink = this._mixer.get_default_sink();
         if (defaultSink) {
             this._desktopDevice = defaultSink.get_name() + '.monitor';
             const desc = defaultSink.get_description() || _('Desktop');
-            this._desktopBtn.setTooltip(
-                _('Record Desktop Audio') + '\n' + desc
-            );
+            if (this._desktopTooltip)
+                this._desktopTooltip.text = _('Record Desktop Audio') + '\n' + desc;
         }
 
-        // Get default input (microphone)
         const defaultSource = this._mixer.get_default_source();
         if (defaultSource) {
             this._micDevice = defaultSource.get_name();
             const desc = defaultSource.get_description() || _('Mic');
-            this._micBtn.setTooltip(
-                _('Record Microphone') + '\n' + desc
-            );
+            if (this._micTooltip)
+                this._micTooltip.text = _('Record Microphone') + '\n' + desc;
         }
     }
 
-    /**
-     * Build the GStreamer audio input pipeline string
-     * Returns null if no audio selected
-     */
     makeAudioInput() {
         this._updateDevices();
 
-        const desktopActive = this._desktopBtn.active && this._desktopDevice;
-        const micActive = this._micBtn.active && this._micDevice;
+        const desktopActive = this._desktopButton?.checked && this._desktopDevice;
+        const micActive = this._micButton?.checked && this._micDevice;
 
         if (!desktopActive && !micActive) return null;
 
         const audioCaps = 'audio/x-raw,channels=2,rate=48000';
-        // Escape device names to prevent pipeline injection
         const dDev = desktopActive ? GLib.shell_quote(this._desktopDevice) : '';
         const mDev = micActive ? GLib.shell_quote(this._micDevice) : '';
 
@@ -175,25 +184,45 @@ export class PartAudio extends PartUI {
             return `pulsesrc device=${dDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
         }
 
-        // micActive
         return `pulsesrc device=${mDev} ! capsfilter caps=${audioCaps} ! audioconvert ! queue`;
     }
 
     _onModeChanged(isCast) {
-        this._desktopBtn.button.visible = isCast;
-        this._micBtn.button.visible = isCast;
+        super._onModeChanged(isCast);
+        if (this._desktopButton) {
+            this._desktopButton.visible = isCast;
+            this._desktopButton.reactive = isCast;
+        }
+        if (this._micButton) {
+            this._micButton.visible = isCast;
+            this._micButton.reactive = isCast;
+        }
     }
 
     destroy() {
-        if (this._desktopBtn?.button) {
-            const parent = this._desktopBtn.button.get_parent();
-            if (parent) parent.remove_child(this._desktopBtn.button);
-            this._desktopBtn.destroy();
+        if (this._desktopTooltip) {
+            const p = this._desktopTooltip.get_parent();
+            if (p) p.remove_child(this._desktopTooltip);
+            this._desktopTooltip.destroy();
+            this._desktopTooltip = null;
         }
-        if (this._micBtn?.button) {
-            const parent = this._micBtn.button.get_parent();
-            if (parent) parent.remove_child(this._micBtn.button);
-            this._micBtn.destroy();
+        if (this._micTooltip) {
+            const p = this._micTooltip.get_parent();
+            if (p) p.remove_child(this._micTooltip);
+            this._micTooltip.destroy();
+            this._micTooltip = null;
+        }
+        if (this._desktopButton) {
+            const parent = this._desktopButton.get_parent();
+            if (parent) parent.remove_child(this._desktopButton);
+            this._desktopButton.destroy();
+            this._desktopButton = null;
+        }
+        if (this._micButton) {
+            const parent = this._micButton.get_parent();
+            if (parent) parent.remove_child(this._micButton);
+            this._micButton.destroy();
+            this._micButton = null;
         }
         this._disconnectMixer();
         this._mixer?.close();

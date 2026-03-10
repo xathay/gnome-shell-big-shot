@@ -21,6 +21,7 @@ export const DrawingMode = Object.freeze({
     TEXT:        'TEXT',
     HIGHLIGHTER: 'HIGHLIGHTER',
     CENSOR:      'CENSOR',
+    BLUR: 'BLUR',
     NUMBER:      'NUMBER',
 });
 
@@ -420,7 +421,7 @@ export class HighlighterAction extends StrokeAction {
 }
 
 // =============================================================================
-// CENSOR (pixelation)
+// CENSOR — mosaic pattern to hide content
 // =============================================================================
 
 export class CensorAction extends RectAction {
@@ -435,8 +436,6 @@ export class CensorAction extends RectAction {
 
         if (w < 1 || h < 1) return;
 
-        // Draw a solid dark overlay to simulate censoring
-        // Real pixelation would need the source image data
         cr.save();
         cr.rectangle(x, y, w, h);
         cr.clip();
@@ -447,7 +446,6 @@ export class CensorAction extends RectAction {
 
         for (let bx = 0; bx < blocksX; bx++) {
             for (let by = 0; by < blocksY; by++) {
-                // Alternate colors for mosaic effect
                 const shade = ((bx + by) % 2 === 0) ? 0.3 : 0.5;
                 cr.setSourceRGBA(shade, shade, shade, 0.9);
                 cr.rectangle(
@@ -460,6 +458,170 @@ export class CensorAction extends RectAction {
             }
         }
         cr.restore();
+    }
+}
+
+// =============================================================================
+// BLUR — Gaussian-like blur effect
+// Preview: shows a semi-transparent frosted overlay.
+// Real blur is performed at save time using box-blur on pixel data.
+// =============================================================================
+
+export class BlurAction extends RectAction {
+    /**
+     * Preview draw — frosted/hatched overlay to indicate blur area.
+     */
+    draw(cr, toWidget, scale) {
+        let [x1, y1] = toWidget(...this.start);
+        let [x2, y2] = toWidget(...this.end);
+
+        const x = Math.min(x1, x2);
+        const y = Math.min(y1, y2);
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+
+        if (w < 1 || h < 1) return;
+
+        cr.save();
+
+        // Semi-transparent overlay to dim the area
+        cr.rectangle(x, y, w, h);
+        cr.setSourceRGBA(0.8, 0.85, 1.0, 0.35);
+        cr.fill();
+
+        // Diagonal hatch lines to indicate blur
+        cr.rectangle(x, y, w, h);
+        cr.clip();
+
+        cr.setSourceRGBA(1.0, 1.0, 1.0, 0.3);
+        cr.setLineWidth(1.0);
+        const spacing = 6 * scale;
+        const maxDim = w + h;
+        for (let d = -maxDim; d < maxDim; d += spacing) {
+            cr.moveTo(x + d, y);
+            cr.lineTo(x + d + h, y + h);
+        }
+        cr.stroke();
+
+        cr.restore();
+
+        // Border
+        cr.save();
+        cr.setSourceRGBA(0.6, 0.7, 1.0, 0.8);
+        cr.setLineWidth(1.5);
+        cr.rectangle(x, y, w, h);
+        cr.stroke();
+        cr.restore();
+    }
+
+    /**
+     * Apply real blur on a GdkPixbuf at save time.
+     * Uses iterative box blur on the pixel data (RGBA).
+     * @param {object} pixbuf - GdkPixbuf.Pixbuf
+     * @param {object} GdkPixbuf - GdkPixbuf module
+     * @param {object} GLib - GLib module
+     * @param {Function} toWidget - coordinate transform
+     * @param {number} scale - draw scale
+     * @returns {object} modified GdkPixbuf.Pixbuf
+     */
+    drawReal(pixbuf, GdkPixbuf, GLib, toWidget, scale) {
+        let [x1, y1] = toWidget(...this.start);
+        let [x2, y2] = toWidget(...this.end);
+
+        const imgW = pixbuf.get_width();
+        const imgH = pixbuf.get_height();
+
+        const x = Math.round(Math.max(0, Math.min(Math.min(x1, x2), imgW - 1)));
+        const y = Math.round(Math.max(0, Math.min(Math.min(y1, y2), imgH - 1)));
+        const w = Math.round(Math.min(Math.abs(x2 - x1), imgW - x));
+        const h = Math.round(Math.min(Math.abs(y2 - y1), imgH - y));
+
+        if (w < 2 || h < 2) return pixbuf;
+
+        const radius = Math.max(3, Math.round((this.options?.size || 8) * scale));
+        const passes = 3;
+
+        const bytes = pixbuf.read_pixel_bytes();
+        const data = bytes.get_data();
+        const rowstride = pixbuf.get_rowstride();
+        const nChannels = pixbuf.get_n_channels();
+
+        // Make a mutable copy
+        const arr = new Uint8Array(data.length);
+        for (let i = 0; i < data.length; i++) arr[i] = data[i];
+
+        // Extract region into flat buffer
+        const regionBuf = new Uint8Array(w * h * nChannels);
+        for (let ry = 0; ry < h; ry++) {
+            for (let rx = 0; rx < w; rx++) {
+                const srcOff = (y + ry) * rowstride + (x + rx) * nChannels;
+                const dstOff = (ry * w + rx) * nChannels;
+                for (let c = 0; c < nChannels; c++)
+                    regionBuf[dstOff + c] = arr[srcOff + c];
+            }
+        }
+
+        // Box blur (horizontal then vertical), repeated for Gaussian approximation
+        const tmp = new Uint8Array(w * h * nChannels);
+        let src = regionBuf;
+        let dst = tmp;
+
+        for (let pass = 0; pass < passes; pass++) {
+            // Horizontal pass
+            for (let ry = 0; ry < h; ry++) {
+                for (let rx = 0; rx < w; rx++) {
+                    const sums = new Float64Array(nChannels);
+                    let cnt = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const sx = Math.max(0, Math.min(rx + k, w - 1));
+                        const off = (ry * w + sx) * nChannels;
+                        for (let c = 0; c < nChannels; c++)
+                            sums[c] += src[off + c];
+                        cnt++;
+                    }
+                    const off = (ry * w + rx) * nChannels;
+                    for (let c = 0; c < nChannels; c++)
+                        dst[off + c] = (sums[c] / cnt) | 0;
+                }
+            }
+            [src, dst] = [dst, src];
+
+            // Vertical pass
+            for (let rx = 0; rx < w; rx++) {
+                for (let ry = 0; ry < h; ry++) {
+                    const sums = new Float64Array(nChannels);
+                    let cnt = 0;
+                    for (let k = -radius; k <= radius; k++) {
+                        const sy = Math.max(0, Math.min(ry + k, h - 1));
+                        const off = (sy * w + rx) * nChannels;
+                        for (let c = 0; c < nChannels; c++)
+                            sums[c] += src[off + c];
+                        cnt++;
+                    }
+                    const off = (ry * w + rx) * nChannels;
+                    for (let c = 0; c < nChannels; c++)
+                        dst[off + c] = (sums[c] / cnt) | 0;
+                }
+            }
+            [src, dst] = [dst, src];
+        }
+
+        // Write blurred region back
+        for (let ry = 0; ry < h; ry++) {
+            for (let rx = 0; rx < w; rx++) {
+                const srcOff = (ry * w + rx) * nChannels;
+                const dstOff = (y + ry) * rowstride + (x + rx) * nChannels;
+                for (let c = 0; c < nChannels; c++)
+                    arr[dstOff + c] = src[srcOff + c];
+            }
+        }
+
+        const newBytes = GLib.Bytes.new(arr);
+        return GdkPixbuf.Pixbuf.new_from_bytes(
+            newBytes, pixbuf.get_colorspace(),
+            pixbuf.get_has_alpha(), pixbuf.get_bits_per_sample(),
+            imgW, imgH, rowstride
+        );
     }
 }
 
@@ -555,6 +717,8 @@ export function createAction(mode, data, options) {
             return new HighlighterAction(data.stroke, options, data.shift);
         case DrawingMode.CENSOR:
             return new CensorAction(data.start, data.end, false, options);
+        case DrawingMode.BLUR:
+            return new BlurAction(data.start, data.end, false, options);
         case DrawingMode.NUMBER:
             return new NumberStampAction(data.position, data.number, options);
         default:

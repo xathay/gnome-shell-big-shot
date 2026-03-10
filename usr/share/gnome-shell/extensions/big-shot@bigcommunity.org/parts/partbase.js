@@ -122,7 +122,7 @@ export class PartPopupSelect extends PartUI {
         if (showPointerContainer) {
             showPointerContainer.insert_child_at_index(this._button, 0);
         } else {
-            const bottomGroup = this._ui._bottomAreaGroup ?? this._ui._content;
+            const bottomGroup = this._ui._panel ?? this._ui._bottomAreaGroup ?? this._ui._content;
             if (bottomGroup)
                 bottomGroup.add_child(this._button);
         }
