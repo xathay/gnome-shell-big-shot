@@ -97,6 +97,9 @@ msgstr "填充"
 msgid "Brush Size"
 msgstr "画笔大小"
 #: NEEDS WORK
+msgid "Font"
+msgstr "字体"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "撤销"
 #: NEEDS WORK

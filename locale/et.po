@@ -97,6 +97,9 @@ msgstr "Täida"
 msgid "Brush Size"
 msgstr "Harja suurus"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Font"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Tagasi võtta"
 #: NEEDS WORK

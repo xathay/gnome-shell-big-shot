@@ -97,6 +97,9 @@ msgstr "Fyllir"
 msgid "Brush Size"
 msgstr "Bursta stærð"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Letur"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Afturkalla"
 #: NEEDS WORK

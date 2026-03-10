@@ -97,6 +97,9 @@ msgstr "Täytä"
 msgid "Brush Size"
 msgstr "Harjan koko"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Fontti"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Kumoa"
 #: NEEDS WORK

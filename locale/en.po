@@ -96,6 +96,9 @@ msgstr "Fill"
 msgid "Brush Size"
 msgstr "Brush Size"
 
+msgid "Font"
+msgstr "Font"
+
 msgid "Undo"
 msgstr "Undo"
 

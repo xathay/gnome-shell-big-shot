@@ -97,6 +97,9 @@ msgstr "Rellenar"
 msgid "Brush Size"
 msgstr "Tamaño del pincel"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Fuente"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Deshacer"
 #: NEEDS WORK

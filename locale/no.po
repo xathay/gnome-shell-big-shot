@@ -97,6 +97,9 @@ msgstr "Fyll"
 msgid "Brush Size"
 msgstr "Penselstørrelse"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Skrift"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Angre"
 #: NEEDS WORK

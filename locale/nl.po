@@ -97,6 +97,9 @@ msgstr "Vullen"
 msgid "Brush Size"
 msgstr "Borstelgrootte"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Lettertype"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Ongedaan maken"
 #: NEEDS WORK
