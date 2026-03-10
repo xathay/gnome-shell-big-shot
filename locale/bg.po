@@ -97,6 +97,9 @@ msgstr "Запълване"
 msgid "Brush Size"
 msgstr "Размер на четката"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Шрифт"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Отмяна"
 #: NEEDS WORK

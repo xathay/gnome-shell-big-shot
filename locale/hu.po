@@ -97,6 +97,9 @@ msgstr "Kitöltés"
 msgid "Brush Size"
 msgstr "Ecsetméret"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Betűtípus"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Visszavonás"
 #: NEEDS WORK

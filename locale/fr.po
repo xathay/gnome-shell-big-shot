@@ -97,6 +97,9 @@ msgstr "Remplir"
 msgid "Brush Size"
 msgstr "Taille du pinceau"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Police"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Annuler"
 #: NEEDS WORK

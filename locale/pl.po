@@ -97,6 +97,9 @@ msgstr "Wypełnij"
 msgid "Brush Size"
 msgstr "Rozmiar pędzla"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Czcionka"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Cofnij"
 #: NEEDS WORK

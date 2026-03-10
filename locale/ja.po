@@ -97,6 +97,9 @@ msgstr "塗りつぶし"
 msgid "Brush Size"
 msgstr "ブラシサイズ"
 #: NEEDS WORK
+msgid "Font"
+msgstr "フォント"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "元に戻す"
 #: NEEDS WORK

@@ -97,6 +97,9 @@ msgstr "Doldur"
 msgid "Brush Size"
 msgstr "Fırça Boyutu"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Yazı Tipi"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Geri Al"
 #: NEEDS WORK

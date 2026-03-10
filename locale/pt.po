@@ -97,6 +97,9 @@ msgstr "Preencher"
 msgid "Brush Size"
 msgstr "Tamanho do Pincel"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Fonte"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Desfazer"
 #: NEEDS WORK

@@ -97,6 +97,9 @@ msgstr "Riempi"
 msgid "Brush Size"
 msgstr "Dimensione Pennello"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Carattere"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Annulla"
 #: NEEDS WORK

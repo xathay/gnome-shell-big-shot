@@ -97,6 +97,9 @@ msgstr "Vyplniť"
 msgid "Brush Size"
 msgstr "Veľkosť štetca"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Písmo"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Zrušiť"
 #: NEEDS WORK

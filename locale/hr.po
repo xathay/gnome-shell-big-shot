@@ -97,6 +97,9 @@ msgstr "Ispuni"
 msgid "Brush Size"
 msgstr "Veličina četkice"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Font"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Poništi"
 #: NEEDS WORK

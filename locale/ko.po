@@ -97,6 +97,9 @@ msgstr "채우기"
 msgid "Brush Size"
 msgstr "브러시 크기"
 #: NEEDS WORK
+msgid "Font"
+msgstr "글꼴"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "실행 취소"
 #: NEEDS WORK

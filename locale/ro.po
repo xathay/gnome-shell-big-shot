@@ -97,6 +97,9 @@ msgstr "Umple"
 msgid "Brush Size"
 msgstr "Dimensiune Pensulă"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Font"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Anulează"
 #: NEEDS WORK

@@ -97,6 +97,9 @@ msgstr "Udfyld"
 msgid "Brush Size"
 msgstr "Penselstørrelse"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Skrifttype"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Fortryd"
 #: NEEDS WORK

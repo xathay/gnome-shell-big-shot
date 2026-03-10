@@ -97,6 +97,9 @@ msgstr "מלא"
 msgid "Brush Size"
 msgstr "גודל מברשת"
 #: NEEDS WORK
+msgid "Font"
+msgstr "גופן"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "ביטול"
 #: NEEDS WORK

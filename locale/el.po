@@ -97,6 +97,9 @@ msgstr "Γέμισμα"
 msgid "Brush Size"
 msgstr "Μέγεθος Πινέλου"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Γραμματοσειρά"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Αναίρεση"
 #: NEEDS WORK

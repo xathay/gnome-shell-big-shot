@@ -97,6 +97,9 @@ msgstr "Füllen"
 msgid "Brush Size"
 msgstr "Pinselgröße"
 #: NEEDS WORK
+msgid "Font"
+msgstr "Schriftart"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Rückgängig"
 #: NEEDS WORK
