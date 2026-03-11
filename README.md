@@ -59,14 +59,15 @@ No separate windows. No external apps. Everything lives inside the native GNOME 
 
 | Feature | Description |
 |---------|-------------|
-| **Desktop Audio** | Record system audio output via PulseAudio monitor source |
-| **Microphone** | Record microphone input, with device auto-detection |
-| **Audio Mix** | Simultaneous desktop + mic recording via `audiomixer` |
+| **Desktop Audio** | Record system audio output via PulseAudio monitor source (`provide-clock=false` for PipeWire sync) |
+| **Microphone** | Record microphone input, dynamic channel detection via `Gvc.MixerControl` |
+| **Audio Mix** | Simultaneous desktop + mic recording via `audiomixer` with latency compensation |
 | **FPS** | 15 / 24 / 30 / 60 frames per second |
 | **Resolution** | 100% / 75% / 50% / 33% downscaling |
-| **GPU Pipeline** | Auto-detected NVIDIA CUDA, AMD/Intel VAAPI, or software fallback |
-| **Quick Stop** | Click the panel indicator to stop recording |
-| **Timer** | Live recording timer in the top panel |
+| **GPU Pipeline** | Auto-detected NVIDIA CUDA, AMD/Intel VAAPI, or software fallback (cascade) |
+| **Quick Stop** | Click the panel indicator or re-open the screenshot UI to stop recording |
+| **Timer** | Live recording timer (spinner during pipeline startup, timer once recording starts) |
+| **Screenshot during recording** | Take screenshots while a screencast is in progress (patched GNOME limitation) |
 
 ### GPU Detection
 
@@ -81,9 +82,13 @@ lspci → detect GPU vendor(s) → select matching pipelines → cascade fallbac
 | NVIDIA | CUDA H.264 → GL H.264 (nvh264enc) |
 | AMD | VAAPI LP H.264 → VAAPI H.264 |
 | Intel | VAAPI LP H.264 → VAAPI H.264 |
-| Fallback | OpenH264 → VP8 → GNOME default |
+| Fallback | SW memfd H.264 → SW memfd VP8 → SW GL H.264 → SW GL VP8 → GNOME default |
 
-All GPU vendors have **equal priority** — whichever is detected gets hardware-accelerated encoding. Software fallback is always available.
+All GPU vendors have **equal priority** — whichever is detected gets hardware-accelerated encoding. Software fallback uses a multi-stage cascade: memfd pipelines first (with `videoconvert`), then GL pipelines (`gldownload`), and finally GNOME's built-in default recorder. The pipeline structure follows GStreamer muxing conventions:
+
+```
+[service: pipewiresrc ! capsfilter] ! videoconvert ! queue ! mux. audio ! mux. muxer name=mux [service: ! filesink]
+```
 
 ### Keyboard Shortcuts
 
@@ -95,6 +100,26 @@ All GPU vendors have **equal priority** — whichever is detected gets hardware-
 | `Ctrl+Shift+Z` / `Ctrl+Y` | Redo |
 | `Delete` / `Backspace` | Remove selected or last object |
 | `Escape` | Deselect current object |
+
+---
+
+## Technical Notes
+
+### GNOME Screencast Service Integration
+
+Big Shot monkey-patches the GNOME Shell Screencast D-Bus proxy (`_screencastProxy`) to inject custom GStreamer pipelines. The GNOME screencast service (a separate process since GNOME 49) automatically prepends `pipewiresrc ! capsfilter` and appends `filesink` to the pipeline string, so the extension only provides the encoding/muxing portion.
+
+Key implementation details:
+- **No duplicate capsfilter** — the service already adds `capsfilter caps=video/x-raw,max-framerate=F/1`, so the extension's pipelines must NOT include their own capsfilter
+- **File extension fix** — the service doesn't provide `fileExtension` for custom pipelines (files would be saved as `.undefined`), so the extension renames the output file using the actual path returned by D-Bus
+- **Screenshot during recording** — GNOME normally blocks `screenshotUI.open()` when `_screencastInProgress` is true; the extension patches this to allow screenshots while recording
+
+### Audio Pipeline
+
+Audio capture works via `Gvc.MixerControl` to detect PulseAudio/PipeWire output monitors and microphone inputs:
+- `provide-clock=false` on `pulsesrc` prevents clock conflicts with `pipewiresrc`
+- Channel count is detected dynamically from the mixer device (not hardcoded)
+- `audiomixer latency=100000000` handles synchronization for simultaneous desktop + mic
 
 ---
 
