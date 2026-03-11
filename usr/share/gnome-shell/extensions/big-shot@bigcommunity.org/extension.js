@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.2.0';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -728,6 +728,22 @@ export default class BigShotExtension extends Extension {
                 });
             };
         }
+
+        // Allow screenshot while recording: GNOME blocks open() when
+        // _screencastInProgress is true. We temporarily clear the flag
+        // so screenshot mode (UIMode.SCREENSHOT=0) can open during recording.
+        this._origOpen = screenshotUI.open.bind(screenshotUI);
+        screenshotUI.open = function (mode) {
+            if (mode === undefined) mode = 0; // UIMode.SCREENSHOT
+            if (this._screencastInProgress && mode !== 1) { // 1 = UIMode.SCREENCAST
+                const saved = this._screencastInProgress;
+                this._screencastInProgress = false;
+                const result = ext._origOpen.call(this, mode);
+                this._screencastInProgress = saved;
+                return result;
+            }
+            return ext._origOpen.call(this, mode);
+        };
     }
 
     _unpatchScreencast() {
@@ -738,9 +754,12 @@ export default class BigShotExtension extends Extension {
             screencastProxy.ScreencastAsync = this._origScreencast;
         if (this._origScreencastArea)
             screencastProxy.ScreencastAreaAsync = this._origScreencastArea;
+        if (this._origOpen)
+            this._screenshotUI.open = this._origOpen;
 
         this._origScreencast = null;
         this._origScreencastArea = null;
+        this._origOpen = null;
     }
 
     async _screencastCommonAsync(filePath, options, originalMethod) {
