@@ -26,50 +26,70 @@ problemas conhecidos e as melhorias planejadas.
 | Indicador | Spinner + timer durante gravação | `parts/partindicator.js` |
 | Quick Stop | Parada rápida | `parts/partquickstop.js` |
 
-### 🔧 Bugs Conhecidos / Em Correção
+### ✅ Bugs Corrigidos
 
-#### 1. Áudio Desktop/Mic não funciona
-**Causa raiz identificada:**
+#### 1. Áudio Desktop/Mic não funciona → RESOLVIDO
+**Causa raiz:**
 - Faltava `provide-clock=false` no `pulsesrc` — conflito de clock com `pipewiresrc`
 - Canais de áudio hardcoded (`channels=2`) em vez de detectar do dispositivo
 - Estrutura do `audiomixer` invertida (mixer antes das sources)
 - Faltava `latency=100000000` no audiomixer para sincronização
 - `GLib.shell_quote()` adicionava aspas extras no nome do device
 
-**Correção aplicada:** Reescrita completa do `makeAudioInput()` baseada na
-referência `gnome-shell-screencast-extra-feature`.
+**Correção:** Reescrita completa do `makeAudioInput()`. Áudio confirmado: `Stream #0:1: Audio: aac (LC), 44100 Hz, stereo, 112 kb/s`.
 
-#### 2. Pipeline de áudio+vídeo com estrutura incorreta
-**Causa raiz:** Segmentos do pipeline estavam na ordem errada.
-O correto (conforme referência) é:
+#### 2. Pipeline de áudio+vídeo com estrutura incorreta → RESOLVIDO
+**Causa raiz:** `name=mux` estava num queue ao invés do muxer; MUXERS tinham `! queue` extra.
+**Correção:** MUXERS simplificados (`mp4mux fragment-duration=500`, `webmmux`), pipeline reestruturado:
 ```
-video ! muxer name=mux   audioSource ! audioPipeline ! mux.   mux.
-```
-Onde o screencast service prepend `pipewiresrc` e append `filesink`:
-```
-pipewiresrc ! video ! muxer name=mux   audioSource ! audioPipeline ! mux.   mux. ! filesink
+video ! queue ! mux. audio ! mux. muxer name=mux
 ```
 
-**Correção aplicada:** `_makePipelineString()` reescrito.
+#### 3. Property name errado no GNOME 49 → RESOLVIDO
+**Causa raiz:** Código usava `_screencastService` que não existe no GNOME 49. O correto é `_screencastProxy`.
+**Correção:** Todas as referências atualizadas para `_screencastProxy`.
+
+#### 4. Capsfilter duplicado → RESOLVIDO
+**Causa raiz:** O serviço GNOME prepend `capsfilter caps=video/x-raw,max-framerate=F/1` para pipelines customizados. Nossa pipeline também tinha capsfilter. Dois capsfilters não conseguiam linkar (erro `Gst.ParseFlags.FATAL_ERRORS`). Descoberto via `GST_DEBUG=3`.
+**Correção:** Capsfilter removido das pipelines sw-memfd; adicionado `videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4` para conversão de formato.
+
+#### 5. Extensão de arquivo `.undefined` → RESOLVIDO
+**Causa raiz:** O serviço não fornece `fileExtension` para pipelines customizados → `stem.undefined`.
+**Correção:** `fixFilePath` usa o caminho real retornado pelo D-Bus (`result[1]`) e renomeia para `.mp4`.
+
+#### 6. Indicador do painel duplicado → RESOLVIDO
+**Causa raiz:** `onPipelineStarting()` era chamado a cada tentativa de pipeline (4x), adicionando spinners duplicados. `onPipelineReady()` nunca era chamado no fallback GNOME.
+**Correção:** `onPipelineStarting()` chamado uma vez antes do loop; `onPipelineReady()` chamado no fallback.
+
+#### 7. Screenshot bloqueado durante gravação → RESOLVIDO
+**Causa raiz:** `screenshotUI.open()` retornava imediatamente quando `_screencastInProgress` é true.
+**Correção:** Patch em `open()` para limpar temporariamente a flag no modo screenshot.
 
 ---
 
 ## Melhorias Planejadas
 
-### Fase 1 — Estabilização (Prioridade Alta)
+### Fase 1 — Estabilização (Prioridade Alta) ✅ CONCLUÍDA
 
 #### 1.1 Validar gravação end-to-end
-- [ ] Testar gravação sem áudio (só vídeo) — verificar cascade de pipelines
-- [ ] Testar gravação com Desktop Audio
-- [ ] Testar gravação com Mic
-- [ ] Testar gravação com Desktop + Mic simultaneamente
-- [ ] Verificar logs com `journalctl --user | grep "Big Shot"`
-- [ ] Validar em hardware: NVIDIA, AMD, Intel e CPU-only
+- [x] Testar gravação sem áudio (só vídeo) — cascade funciona (sw-memfd-h264-openh264)
+- [x] Testar gravação com Desktop Audio — Stream AAC 44100Hz stereo confirmado
+- [x] Testar gravação com Mic — funciona via pulsesrc + Gvc.MixerControl
+- [x] Testar gravação com Desktop + Mic simultaneamente — audiomixer funciona
+- [x] Verificar logs com `journalctl --user | grep "Big Shot"` — todas as mensagens corretas
+- [ ] Validar em hardware: NVIDIA, AMD, Intel e CPU-only (testado apenas em VM virtio sem GPU)
 
 #### 1.2 Robustez do serviço de screencast
-- [ ] Garantir que o patch `Gst.init` funciona em todas as situações
+- [x] Pipeline cascade funciona (tenta hw → sw-memfd → sw-gl → GNOME default)
 - [ ] Tratar reconexão automática se o serviço crashar
-- [ ] Log detalhado de qual pipeline foi selecionado e por quê
+- [x] Log detalhado de qual pipeline foi selecionado e por quê
+
+#### 1.3 Correções adicionais (descobertas durante testes)
+- [x] Corrigir `_screencastProxy` (era `_screencastService` no código)
+- [x] Remover capsfilter duplicado das pipelines sw-memfd
+- [x] Corrigir extensão de arquivo `.undefined` → `.mp4`
+- [x] Corrigir indicador do painel (spinner duplicado)
+- [x] Permitir screenshot durante gravação (patch em `screenshotUI.open()`)
 
 ### Fase 2 — Qualidade de Gravação (Prioridade Média)
 
@@ -125,23 +145,30 @@ Inspirado no `big-video-converter`:
 
 ## Referências Técnicas
 
-### Pipeline GStreamer — Anatomia
+### Pipeline GStreamer — Anatomia Real (GNOME 49)
+
+O serviço de screencast do GNOME 49 é um processo D-Bus separado que envolve o pipeline customizado:
+
 ```
-pipewiresrc                      ← Auto-prepended pelo serviço
-  ! capsfilter caps=...          ← Filtro de framerate/formato
-  ! encoder                      ← Codec (nvh264enc, vaapih264enc, openh264enc, vp8enc)
-  ! parser                       ← Parse (h264parse)
-  ! muxer name=mux               ← Container (mp4mux, webmmux)
-pulsesrc device=X provide-clock=false  ← Fonte de áudio
+pipewiresrc path=X do-timestamp=true keepalive-time=1000 resend-last=true   ← Auto-prepended pelo serviço
+  ! capsfilter caps=video/x-raw,max-framerate=F/1                            ← Auto-prepended pelo serviço
+  ! videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4  ← Nossa pipeline (início)
+  ! queue
+  ! openh264enc complexity=high bitrate=40000000 ...                          ← Encoder
+  ! h264parse
+  ! queue
+  ! mux.                                                                      ← Conecta vídeo ao muxer
+  pulsesrc device=X provide-clock=false                                       ← Áudio (fonte)
   ! capsfilter caps=audio/x-raw,channels=N
-  ! audioconvert
-  ! queue
-  ! audioEncoder                 ← (fdkaacenc, vorbisenc)
-  ! queue
-  ! mux.                         ← Conecta ao muxer
-mux.                             ← Ponto de saída do muxer
-  ! filesink                     ← Auto-appended pelo serviço
+  ! audioconvert ! queue ! fdkaacenc ! queue
+  ! mux.                                                                      ← Conecta áudio ao muxer
+  mp4mux fragment-duration=500 name=mux                                       ← Muxer (DEVE ser o último)
+  ! filesink location="path.undefined"                                        ← Auto-appended pelo serviço
 ```
+
+**IMPORTANTE:** O serviço NÃO fornece `fileExtension` para pipelines customizados. Os arquivos são salvos como `.undefined` e a extensão renomeia para `.mp4` após a gravação.
+
+**IMPORTANTE:** A pipeline customizada NÃO deve incluir `capsfilter` — o serviço já adiciona um. Dois capsfilters causam `FATAL_ERRORS`.
 
 ### Detecção de GPU — Paridade com big-video-converter
 | Detecção | big-video-converter (bash) | Big Shot (GJS) |
