@@ -41,7 +41,7 @@ msgid "Desktop"
 msgstr "Bureau"
 #: NEEDS WORK
 msgid "Mic"
-msgstr "Microphone"
+msgstr "Micro"
 #: NEEDS WORK
 msgid "Record Desktop Audio"
 msgstr "Enregistrer l'audio du bureau"

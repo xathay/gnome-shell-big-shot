@@ -38,7 +38,7 @@ msgid "Confirm"
 msgstr "Potvrdiť"
 #: NEEDS WORK
 msgid "Desktop"
-msgstr "Pracovná plocha"
+msgstr "Desktop"
 #: NEEDS WORK
 msgid "Mic"
 msgstr "Mikrofón"

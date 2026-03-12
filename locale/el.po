@@ -38,7 +38,7 @@ msgid "Confirm"
 msgstr "Επιβεβαίωση"
 #: NEEDS WORK
 msgid "Desktop"
-msgstr "Επιφάνεια εργασίας"
+msgstr "Desktop"
 #: NEEDS WORK
 msgid "Mic"
 msgstr "Μικρόφωνο"

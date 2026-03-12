@@ -74,10 +74,10 @@ msgid "Desktop Audio"
 msgstr "Áudio da Área de Trabalho"
 
 msgid "Desktop"
-msgstr "Área de Trabalho"
+msgstr "Desktop"
 
 msgid "Mic"
-msgstr "Microfone"
+msgstr "Mic"
 
 msgid "Microphone"
 msgstr "Microfone"
