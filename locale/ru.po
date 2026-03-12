@@ -38,7 +38,7 @@ msgid "Confirm"
 msgstr "Подтвердить"
 #: NEEDS WORK
 msgid "Desktop"
-msgstr "Рабочий стол"
+msgstr "Десктоп"
 #: NEEDS WORK
 msgid "Mic"
 msgstr "Микрофон"
