@@ -39,8 +39,29 @@ msgstr "Marcador"
 msgid "Censor"
 msgstr "Censurar"
 
+msgid "Blur"
+msgstr "Desfocar"
+
 msgid "Number"
 msgstr "Número"
+
+msgid "Select / Move"
+msgstr "Selecionar / Mover"
+
+msgid "Color"
+msgstr "Cor"
+
+msgid "Fill"
+msgstr "Preenchimento"
+
+msgid "Font"
+msgstr "Fonte"
+
+msgid "Edit"
+msgstr "Editar"
+
+msgid "Custom"
+msgstr "Personalizado"
 
 msgid "Background"
 msgstr "Fundo"
@@ -53,6 +74,12 @@ msgstr "Margem"
 
 msgid "Desktop Audio"
 msgstr "Áudio da Área de Trabalho"
+
+msgid "Desktop"
+msgstr "Área de Trabalho"
+
+msgid "Mic"
+msgstr "Microfone"
 
 msgid "Microphone"
 msgstr "Microfone"
@@ -101,3 +128,15 @@ msgstr "Texto da anotação"
 
 msgid "Confirm"
 msgstr "Confirmar"
+
+msgid "Screenshot taken"
+msgstr "Captura de tela realizada"
+
+msgid "Screenshots"
+msgstr "Capturas de tela"
+
+msgid "Screenshot from %s"
+msgstr "Captura de tela de %s"
+
+msgid "Drawing canvas"
+msgstr "Área de desenho"

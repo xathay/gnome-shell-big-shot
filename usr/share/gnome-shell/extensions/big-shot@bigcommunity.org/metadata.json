@@ -4,6 +4,6 @@
     "uuid": "big-shot@bigcommunity.org",
     "shell-version": ["46", "47", "48", "49"],
     "version": 1,
-    "url": "https://github.com/BigCommunity/gnome-shell-big-shot",
+    "url": "https://github.com/big-comm/gnome-shell-big-shot",
     "gettext-domain": "big-shot@bigcommunity.org"
 }
