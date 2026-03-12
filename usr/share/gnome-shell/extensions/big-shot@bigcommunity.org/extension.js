@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '0.2.1';
+export const APP_VERSION = '0.3.0';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -102,7 +102,26 @@ const VIDEO_PIPELINES = [
         elements: ['gldownload', 'nvh264enc'],
         ext: 'mp4',
     },
-    // ── AMD + Intel (VAAPI) ──
+    // ── AMD + Intel (VA — new gst-plugin-va) ──
+    {
+        id: 'va-h264-lp',
+        label: 'VA H.264 Low-Power',
+        vendors: [GpuVendor.AMD, GpuVendor.INTEL],
+        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
+        enc: 'vah264lpenc rate-control=cbr bitrate=40000 ! h264parse',
+        elements: ['vah264lpenc'],
+        ext: 'mp4',
+    },
+    {
+        id: 'va-h264',
+        label: 'VA H.264',
+        vendors: [GpuVendor.AMD, GpuVendor.INTEL],
+        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
+        enc: 'vah264enc rate-control=cbr bitrate=40000 ! h264parse',
+        elements: ['vah264enc'],
+        ext: 'mp4',
+    },
+    // ── AMD + Intel (VAAPI — legacy gstreamer-vaapi) ──
     {
         id: 'vaapi-h264-lp',
         label: 'VAAPI LP H.264',
