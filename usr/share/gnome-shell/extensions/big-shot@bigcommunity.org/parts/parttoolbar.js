@@ -18,6 +18,18 @@ import { gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.j
 import { PartUI } from './partbase.js';
 import { PALETTE } from '../drawing/colors.js';
 
+// Cached font list (loaded once, shared across instances)
+let _cachedFontNames = null;
+
+function _getFontNames() {
+    if (!_cachedFontNames) {
+        const fontMap = PangoCairo.FontMap.get_default();
+        const families = fontMap.list_families();
+        _cachedFontNames = families.map(f => f.get_name()).sort((a, b) => a.localeCompare(b));
+    }
+    return _cachedFontNames;
+}
+
 const SCREENSHOT_TOOLS = [
     { id: 'select', icon: 'big-shot-select-symbolic', label: () => _('Select / Move') },
     { id: 'pen', icon: 'big-shot-pen-symbolic', label: () => _('Pen') },
@@ -350,10 +362,7 @@ export class PartToolbar extends PartUI {
             style: 'padding: 4px;',
         });
 
-        // Get system fonts
-        const fontMap = PangoCairo.FontMap.get_default();
-        const families = fontMap.list_families();
-        const fontNames = families.map(f => f.get_name()).sort((a, b) => a.localeCompare(b));
+        const fontNames = _getFontNames();
 
         // Scrollable list
         const scrollView = new St.ScrollView({
@@ -371,7 +380,7 @@ export class PartToolbar extends PartUI {
                 x_expand: true,
                 child: new St.Label({
                     text: name,
-                    style: `color: #ffffff; font-size: 13px; font-family: "${name}"; text-align: left;`,
+                    style: 'color: #ffffff; font-size: 13px; text-align: left;',
                     x_align: Clutter.ActorAlign.START,
                     x_expand: true,
                 }),

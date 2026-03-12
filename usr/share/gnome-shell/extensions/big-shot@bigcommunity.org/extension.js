@@ -243,6 +243,9 @@ export default class BigShotExtension extends Extension {
 
         this._screenshotUI = screenshotUI;
 
+        // Initialize translations (must be before _createParts so _() works)
+        this.initTranslations();
+
         // NOTE: Pipeline detection moved to lazy — runs on first screencast attempt
         // to avoid blocking enable() with synchronous subprocess calls.
 
@@ -261,9 +264,6 @@ export default class BigShotExtension extends Extension {
 
         // Intercept _saveScreenshot to composite annotations onto the image
         this._patchSaveScreenshot();
-
-        // Initialize translations
-        this.initTranslations();
 
         console.log('[Big Shot] Extension enabled');
     }
