@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '0.3.2';
+export const APP_VERSION = '0.3.3';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -250,6 +250,13 @@ export default class BigShotExtension extends Extension {
     }
 
     disable() {
+        // Clean up pending rename timer
+        if (this._renameTimerId) {
+            GLib.source_remove(this._renameTimerId);
+            this._renameTimerId = 0;
+        }
+        this._pendingRename = null;
+
         // Destroy all parts
         for (const part of this._parts) {
             try {
@@ -795,10 +802,20 @@ export default class BigShotExtension extends Extension {
                 const result = await originalMethod(filePath, pipelineOptions);
                 console.log(`[Big Shot] Pipeline ${config.id} succeeded`);
                 this._indicator?.onPipelineReady();
-                // Service returns [success, actualPath] — rename .undefined → correct ext
-                const actualPath = Array.isArray(result) ? result[1] : null;
-                if (actualPath)
-                    fixFilePath(actualPath, config.ext);
+
+                // Fix .undefined extension: GNOME creates files with .undefined
+                // for custom pipelines. Schedule rename after recording stops
+                // and fix the return path so notifications use correct extension.
+                if (result && result[0] && typeof result[1] === 'string') {
+                    const actualPath = result[1];
+                    const correctExt = `.${config.ext}`;
+                    if (!actualPath.endsWith(correctExt)) {
+                        const newPath = actualPath.replace(/\.[^.]+$/, correctExt);
+                        console.log(`[Big Shot] Scheduling rename: ${actualPath} → ${newPath}`);
+                        this._scheduleFileRename(actualPath, config.ext);
+                        return [result[0], newPath];
+                    }
+                }
                 return result;
             } catch (e) {
                 console.warn(`[Big Shot] Pipeline ${config.id} failed: ${e.message}`);
@@ -810,6 +827,40 @@ export default class BigShotExtension extends Extension {
         console.warn('[Big Shot] All pipelines failed, falling back to GNOME default');
         this._indicator?.onPipelineReady();
         return originalMethod(filePath, options);
+    }
+
+    /**
+     * Schedule file rename after recording stops.
+     * GNOME creates the file with .undefined extension when using custom
+     * pipelines. We poll until recording ends and the file exists, then rename.
+     */
+    _scheduleFileRename(filePath, ext) {
+        if (!filePath || !ext) return;
+        if (this._renameTimerId) {
+            GLib.source_remove(this._renameTimerId);
+            this._renameTimerId = 0;
+        }
+        this._pendingRename = { filePath, ext };
+        // Poll every 500ms: check if recording stopped and file exists
+        this._renameTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+            const screenshotUI = this._screenshotUI;
+            // Still recording — keep waiting
+            if (screenshotUI?._screencastInProgress)
+                return GLib.SOURCE_CONTINUE;
+
+            // Recording stopped — try to rename the file
+            this._renameTimerId = 0;
+            const pending = this._pendingRename;
+            if (pending) {
+                this._pendingRename = null;
+                // Small delay to ensure file is fully written
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                    fixFilePath(pending.filePath, pending.ext);
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _makePipelineString(config, framerateCaps, downsize) {

@@ -240,6 +240,9 @@ export class PartToolbar extends PartUI {
                     this._repositionEditPanel();
                     return GLib.SOURCE_REMOVE;
                 });
+            } else {
+                // Deactivate current tool so overlay stops capturing events
+                this.selectTool(null);
             }
         });
 
