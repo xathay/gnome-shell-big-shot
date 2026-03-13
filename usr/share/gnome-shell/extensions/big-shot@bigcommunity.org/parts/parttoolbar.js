@@ -374,13 +374,14 @@ export class PartToolbar extends PartUI {
         const listBox = new St.BoxLayout({ vertical: true, style: 'spacing: 2px;' });
 
         for (const name of fontNames) {
+            const escapedName = name.replace(/'/g, "\\'");
             const btn = new St.Button({
                 style_class: 'big-shot-edit-tool-btn',
                 can_focus: true,
                 x_expand: true,
                 child: new St.Label({
                     text: name,
-                    style: 'color: #ffffff; font-size: 13px; text-align: left;',
+                    style: `color: #ffffff; font-size: 15px; font-family: '${escapedName}'; text-align: left;`,
                     x_align: Clutter.ActorAlign.START,
                     x_expand: true,
                 }),

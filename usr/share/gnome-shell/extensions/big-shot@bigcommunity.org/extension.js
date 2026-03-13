@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '0.3.1';
+export const APP_VERSION = '0.3.2';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -83,77 +83,48 @@ function detectGpuVendors() {
  *   lowpower — Optional, use low-power VAAPI mode
  */
 const VIDEO_PIPELINES = [
-    // ── NVIDIA (CUDA + NVENC) ──
+    // ── NVIDIA (NVENC with raw input — works with GNOME Screencast service) ──
     {
-        id: 'nvidia-cuda-h264-nvenc',
-        label: 'NVIDIA CUDA H.264',
+        id: 'nvidia-raw-h264-nvenc',
+        label: 'NVIDIA H.264',
         vendors: [GpuVendor.NVIDIA],
-        src: 'capsfilter caps=video/x-raw(memory:CUDAMemory),framerate=FRAMERATE_CAPS ! cudaconvert ! cudadownload ! videoconvert ! queue',
+        src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
         enc: 'nvh264enc rc-mode=cbr-hq bitrate=40000 ! h264parse',
-        elements: ['cudaupload', 'cudaconvert', 'cudadownload', 'nvh264enc'],
+        elements: ['videoconvert', 'nvh264enc'],
         ext: 'mp4',
     },
+    // ── AMD + Intel (VA — new gst-plugin-va, raw input) ──
     {
-        id: 'nvidia-gl-h264-nvenc',
-        label: 'NVIDIA GL H.264',
-        vendors: [GpuVendor.NVIDIA],
-        src: 'capsfilter caps=video/x-raw(memory:GLMemory),framerate=FRAMERATE_CAPS ! gldownload ! videoconvert ! queue',
-        enc: 'nvh264enc rc-mode=cbr-hq bitrate=40000 ! h264parse',
-        elements: ['gldownload', 'nvh264enc'],
-        ext: 'mp4',
-    },
-    // ── AMD + Intel (VA — new gst-plugin-va) ──
-    {
-        id: 'va-h264-lp',
+        id: 'va-raw-h264-lp',
         label: 'VA H.264 Low-Power',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
+        src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
         enc: 'vah264lpenc rate-control=cbr bitrate=40000 ! h264parse',
-        elements: ['vah264lpenc'],
+        elements: ['videoconvert', 'vah264lpenc'],
         ext: 'mp4',
     },
     {
-        id: 'va-h264',
+        id: 'va-raw-h264',
         label: 'VA H.264',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
+        src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
         enc: 'vah264enc rate-control=cbr bitrate=40000 ! h264parse',
-        elements: ['vah264enc'],
+        elements: ['videoconvert', 'vah264enc'],
         ext: 'mp4',
     },
-    // ── AMD + Intel (VAAPI — legacy gstreamer-vaapi) ──
+    // ── AMD + Intel (VAAPI — legacy gstreamer-vaapi, raw input) ──
     {
-        id: 'vaapi-h264-lp',
-        label: 'VAAPI LP H.264',
-        vendors: [GpuVendor.AMD, GpuVendor.INTEL],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
-        enc: 'vaapih264enc rate-control=cbr bitrate=40000 tune=high-compression ! h264parse',
-        elements: ['vaapih264enc'],
-        lowpower: true,
-        ext: 'mp4',
-    },
-    {
-        id: 'vaapi-h264',
+        id: 'vaapi-raw-h264',
         label: 'VAAPI H.264',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS',
+        src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
         enc: 'vaapih264enc rate-control=cbr bitrate=40000 ! h264parse',
-        elements: ['vaapih264enc'],
+        elements: ['videoconvert', 'vaapih264enc'],
         ext: 'mp4',
     },
     // ── Software fallbacks (any GPU / no GPU) ──
     // Note: the screencast service prepends "capsfilter caps=video/x-raw,max-framerate=F/1"
-    // for custom pipelines, which forces video/x-raw (no DMABuf). DMABuf/GL pipelines will
-    // fail in the custom path but serve as fallback reference for future direct-pipeline mode.
-    {
-        id: 'sw-gl-h264-openh264',
-        label: 'Software GL H.264',
-        vendors: [],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS ! glupload ! glcolorconvert ! gldownload ! queue',
-        enc: 'openh264enc complexity=high bitrate=40000000 multi-thread=4 ! h264parse',
-        elements: ['glupload', 'glcolorconvert', 'gldownload', 'openh264enc'],
-        ext: 'mp4',
-    },
+    // for custom pipelines, which forces video/x-raw (no DMABuf/GL/CUDA memory).
     {
         id: 'sw-memfd-h264-openh264',
         label: 'Software H.264',
@@ -165,15 +136,6 @@ const VIDEO_PIPELINES = [
         enc: 'openh264enc complexity=high bitrate=40000000 multi-thread=4 ! h264parse',
         elements: ['videoconvert', 'openh264enc'],
         ext: 'mp4',
-    },
-    {
-        id: 'sw-gl-vp8',
-        label: 'Software GL VP8',
-        vendors: [],
-        src: 'capsfilter caps=video/x-raw(memory:DMABuf),framerate=FRAMERATE_CAPS ! glupload ! glcolorconvert ! gldownload ! queue',
-        enc: 'vp8enc min_quantizer=10 max_quantizer=50 cq_level=13 cpu-used=5 threads=4 deadline=1 static-threshold=1000 buffer-size=20000 ! queue',
-        elements: ['glupload', 'glcolorconvert', 'gldownload', 'vp8enc'],
-        ext: 'webm',
     },
     {
         id: 'sw-memfd-vp8',
