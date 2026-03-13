@@ -100,6 +100,9 @@ msgstr "ブラシサイズ"
 msgid "Font"
 msgstr "フォント"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "強度"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "元に戻す"
 #: NEEDS WORK

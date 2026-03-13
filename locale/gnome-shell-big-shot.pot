@@ -98,6 +98,9 @@ msgstr  ""
 msgid   "Font"
 msgstr  ""
 
+msgid   "Intensity"
+msgstr  ""
+
 msgid   "Undo"
 msgstr  ""
 

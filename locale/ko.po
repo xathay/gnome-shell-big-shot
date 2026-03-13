@@ -100,6 +100,9 @@ msgstr "브러시 크기"
 msgid "Font"
 msgstr "글꼴"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "강도"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "실행 취소"
 #: NEEDS WORK

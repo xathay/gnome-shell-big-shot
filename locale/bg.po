@@ -100,6 +100,9 @@ msgstr "Размер на четката"
 msgid "Font"
 msgstr "Шрифт"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Интензивност"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Отмяна"
 #: NEEDS WORK

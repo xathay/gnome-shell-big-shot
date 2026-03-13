@@ -100,6 +100,9 @@ msgstr "Размер кисти"
 msgid "Font"
 msgstr "Шрифт"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Интенсивность"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Отменить"
 #: NEEDS WORK

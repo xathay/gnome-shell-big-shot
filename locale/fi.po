@@ -100,6 +100,9 @@ msgstr "Harjan koko"
 msgid "Font"
 msgstr "Fontti"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensiteetti"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Kumoa"
 #: NEEDS WORK

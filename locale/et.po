@@ -100,6 +100,9 @@ msgstr "Harja suurus"
 msgid "Font"
 msgstr "Font"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensiivsus"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Tagasi võtta"
 #: NEEDS WORK

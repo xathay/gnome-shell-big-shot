@@ -100,6 +100,9 @@ msgstr "Fırça Boyutu"
 msgid "Font"
 msgstr "Yazı Tipi"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Yoğunluk"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Geri Al"
 #: NEEDS WORK

@@ -100,6 +100,9 @@ msgstr "Μέγεθος Πινέλου"
 msgid "Font"
 msgstr "Γραμματοσειρά"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Ένταση"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Αναίρεση"
 #: NEEDS WORK

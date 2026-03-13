@@ -100,6 +100,9 @@ msgstr "Penselstørrelse"
 msgid "Font"
 msgstr "Skrifttype"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensitet"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Fortryd"
 #: NEEDS WORK

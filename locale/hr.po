@@ -100,6 +100,9 @@ msgstr "Veličina četkice"
 msgid "Font"
 msgstr "Font"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intenzitet"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Poništi"
 #: NEEDS WORK

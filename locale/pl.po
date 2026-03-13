@@ -100,6 +100,9 @@ msgstr "Rozmiar pędzla"
 msgid "Font"
 msgstr "Czcionka"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensywność"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Cofnij"
 #: NEEDS WORK

@@ -100,6 +100,9 @@ msgstr "Dimensiune Pensulă"
 msgid "Font"
 msgstr "Font"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensitate"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Anulează"
 #: NEEDS WORK

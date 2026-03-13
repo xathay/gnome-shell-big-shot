@@ -100,6 +100,9 @@ msgstr "画笔大小"
 msgid "Font"
 msgstr "字体"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "强度"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "撤销"
 #: NEEDS WORK

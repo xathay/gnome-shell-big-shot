@@ -100,6 +100,9 @@ msgstr "Tamanho do Pincel"
 msgid "Font"
 msgstr "Fonte"
 #: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensidade"
+#: NEEDS WORK
 msgid "Undo"
 msgstr "Desfazer"
 #: NEEDS WORK
