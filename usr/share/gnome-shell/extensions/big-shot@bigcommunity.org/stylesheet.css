@@ -1,0 +1,104 @@
+/* Big Shot — Extension Stylesheet
+ *
+ * Uses GNOME Shell CSS conventions for native look.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+/* ===== Floating Edit Panel ===== */
+.big-shot-edit-popup {
+    background-color: rgba(30, 30, 30, 0.95);
+    border-radius: 14px;
+    padding: 8px 12px;
+    spacing: 6px;
+    color: #ffffff;
+}
+
+.big-shot-edit-row {
+    spacing: 4px;
+}
+
+.big-shot-edit-tool-btn {
+    border-radius: 10px;
+    padding: 6px;
+    min-width: 36px;
+    min-height: 36px;
+    color: #ffffff;
+}
+
+.big-shot-edit-tool-btn StIcon {
+    color: #ffffff;
+    -st-icon-style: symbolic;
+}
+
+.big-shot-edit-tool-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.big-shot-edit-tool-btn:checked {
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.big-shot-edit-tool-btn:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.big-shot-edit-sep {
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.15);
+    margin: 4px 6px;
+}
+
+/* ===== Audio Toggle Buttons ===== */
+.big-shot-audio-button {
+    border-radius: 10px;
+    padding: 4px 10px;
+    spacing: 6px;
+}
+
+.big-shot-audio-button:checked {
+    background-color: rgba(53, 132, 228, 0.4);
+}
+
+/* ===== Panel Indicator ===== */
+.big-shot-indicator {
+    spacing: 6px;
+}
+
+.big-shot-indicator-timer {
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== Gradient Picker ===== */
+.big-shot-gradient-picker {
+    background-color: rgba(30, 30, 30, 0.92);
+    border-radius: 12px;
+    padding: 6px;
+    spacing: 4px;
+}
+
+.big-shot-gradient-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+}
+
+.big-shot-gradient-swatch:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.big-shot-gradient-swatch:checked {
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+/* ===== Crop Handles ===== */
+.big-shot-crop-handle {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background-color: white;
+    border: 2px solid rgba(0, 0, 0, 0.5);
+}

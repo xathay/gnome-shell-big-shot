@@ -1,0 +1,103 @@
+# German translation for Big Shot
+# Copyright (C) 2024 BigCommunity
+# This file is distributed under the same license as the big-shot package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: big-shot 1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/BigCommunity/gnome-shell-big-shot/issues\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: 2024-01-01 00:00+0000\n"
+"Last-Translator: BigCommunity <dev@bigcommunity.org>\n"
+"Language-Team: German\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Pen"
+msgstr "Stift"
+
+msgid "Arrow"
+msgstr "Pfeil"
+
+msgid "Line"
+msgstr "Linie"
+
+msgid "Rectangle"
+msgstr "Rechteck"
+
+msgid "Oval"
+msgstr "Oval"
+
+msgid "Text"
+msgstr "Text"
+
+msgid "Highlighter"
+msgstr "Textmarker"
+
+msgid "Censor"
+msgstr "Zensieren"
+
+msgid "Number"
+msgstr "Nummer"
+
+msgid "Background"
+msgstr "Hintergrund"
+
+msgid "Crop"
+msgstr "Zuschneiden"
+
+msgid "Padding"
+msgstr "Abstand"
+
+msgid "Desktop Audio"
+msgstr "Desktop-Audio"
+
+msgid "Microphone"
+msgstr "Mikrofon"
+
+msgid "FPS"
+msgstr "FPS"
+
+msgid "Resolution"
+msgstr "Auflösung"
+
+msgid "No Fill"
+msgstr "Keine Füllung"
+
+msgid "Gradient Angle"
+msgstr "Verlaufswinkel"
+
+msgid "Border Radius"
+msgstr "Eckenradius"
+
+msgid "Record Desktop Audio"
+msgstr "Desktop-Audio aufnehmen"
+
+msgid "Record Microphone"
+msgstr "Mikrofon aufnehmen"
+
+msgid "Stroke Color"
+msgstr "Strichfarbe"
+
+msgid "Fill Color"
+msgstr "Füllfarbe"
+
+msgid "Brush Size"
+msgstr "Pinselgröße"
+
+msgid "Undo"
+msgstr "Rückgängig"
+
+msgid "Redo"
+msgstr "Wiederherstellen"
+
+msgid "Text…"
+msgstr "Text…"
+
+msgid "Annotation text"
+msgstr "Anmerkungstext"
+
+msgid "Confirm"
+msgstr "Bestätigen"

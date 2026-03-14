@@ -1,0 +1,134 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2024 BigCommunity
+# This file is distributed under the same license as the big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: big-shot 1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/BigCommunity/gnome-shell-big-shot/issues\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: parts/parttoolbar.js
+msgid "Pen"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Arrow"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Line"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Rectangle"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Oval"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Text"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Highlighter"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Censor"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Number"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Background"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Crop"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Padding"
+msgstr ""
+
+#: parts/partaudio.js
+msgid "Desktop Audio"
+msgstr ""
+
+#: parts/partaudio.js
+msgid "Microphone"
+msgstr ""
+
+#: parts/partframerate.js
+msgid "FPS"
+msgstr ""
+
+#: parts/partdownsize.js
+msgid "Resolution"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "No Fill"
+msgstr ""
+
+#: parts/partgradient.js
+msgid "Gradient Angle"
+msgstr ""
+
+#: parts/partgradient.js
+msgid "Border Radius"
+msgstr ""
+
+#: parts/partaudio.js
+msgid "Record Desktop Audio"
+msgstr ""
+
+#: parts/partaudio.js
+msgid "Record Microphone"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Stroke Color"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Fill Color"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Brush Size"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Undo"
+msgstr ""
+
+#: parts/parttoolbar.js
+msgid "Redo"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Text…"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Annotation text"
+msgstr ""
+
+#: drawing/overlay.js
+msgid "Confirm"
+msgstr ""

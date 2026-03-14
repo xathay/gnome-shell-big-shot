@@ -1,0 +1,152 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the gnome-shell-big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: gnome-shell-big-shot\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Screenshot taken"
+msgstr "Captura de pantalla realizada"
+#: NEEDS WORK
+msgid "Screenshots"
+msgstr "Capturas de pantalla"
+#: NEEDS WORK
+msgid "Screenshot from %s"
+msgstr "Captura de pantalla de %s"
+#: NEEDS WORK
+msgid "Drawing canvas"
+msgstr "Lienzo de dibujo"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Texto…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Texto de anotación"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Confirmar"
+#: NEEDS WORK
+msgid "Desktop"
+msgstr "Escritorio"
+#: NEEDS WORK
+msgid "Mic"
+msgstr "Mic"
+#: NEEDS WORK
+msgid "Record Desktop Audio"
+msgstr "Grabar audio del escritorio"
+#: NEEDS WORK
+msgid "Record Microphone"
+msgstr "Grabar micrófono"
+#: NEEDS WORK
+msgid "Gradient Angle"
+msgstr "Ángulo de degradado"
+#: NEEDS WORK
+msgid "Border Radius"
+msgstr "Radio de borde"
+#: NEEDS WORK
+msgid "Frames per second"
+msgstr "Cuadros por segundo"
+#: NEEDS WORK
+msgid "Recording resolution"
+msgstr "Resolución de grabación"
+#: NEEDS WORK
+msgid "Select / Move"
+msgstr "Seleccionar / Mover"
+#: NEEDS WORK
+msgid "Pen"
+msgstr "Lápiz"
+#: NEEDS WORK
+msgid "Arrow"
+msgstr "Flecha"
+#: NEEDS WORK
+msgid "Line"
+msgstr "Línea"
+#: NEEDS WORK
+msgid "Rectangle"
+msgstr "Rectángulo"
+#: NEEDS WORK
+msgid "Oval"
+msgstr "Oval"
+#: NEEDS WORK
+msgid "Text"
+msgstr "Texto"
+#: NEEDS WORK
+msgid "Highlighter"
+msgstr "Resaltador"
+#: NEEDS WORK
+msgid "Censor"
+msgstr "Censurar"
+#: NEEDS WORK
+msgid "Blur"
+msgstr "Desenfoque"
+#: NEEDS WORK
+msgid "Number"
+msgstr "Número"
+#: NEEDS WORK
+msgid "Color"
+msgstr "Color"
+#: NEEDS WORK
+msgid "Fill"
+msgstr "Rellenar"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Tamaño del pincel"
+#: NEEDS WORK
+msgid "Font"
+msgstr "Fuente"
+#: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensidad"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Deshacer"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Rehacer"
+#: NEEDS WORK
+msgid "Quality"
+msgstr "Calidad"
+#: NEEDS WORK
+msgid "High"
+msgstr "Alto"
+#: NEEDS WORK
+msgid "Medium"
+msgstr "Medio"
+#: NEEDS WORK
+msgid "Low"
+msgstr "Bajo"
+#: NEEDS WORK
+msgid "Recording quality (bitrate)"
+msgstr "Calidad de grabación (bitrate)"
+#: NEEDS WORK
+msgid "Codec"
+msgstr "Códec"
+#: NEEDS WORK
+msgid "Edit"
+msgstr "Editar"
+#: NEEDS WORK
+msgid "Custom"
+msgstr "Personalizado"
+#: NEEDS WORK
+msgid "No Fill"
+msgstr "Sin Relleno"
+#: NEEDS WORK
+msgid "Auto"
+msgstr "Automático"
+#: NEEDS WORK
+msgid "Use best available codec"
+msgstr "Usar el códec disponible más adecuado"
+#: NEEDS WORK
+msgid "Video codec"
+msgstr "Códec de video"

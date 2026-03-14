@@ -1,0 +1,151 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the gnome-shell-big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: gnome-shell-big-shot\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Screenshot taken"
+msgstr "Screenshot taken"
+
+msgid "Screenshots"
+msgstr "Screenshots"
+
+msgid "Screenshot from %s"
+msgstr "Screenshot from %s"
+
+msgid "Drawing canvas"
+msgstr "Drawing canvas"
+
+msgid "Text…"
+msgstr "Text…"
+
+msgid "Annotation text"
+msgstr "Annotation text"
+
+msgid "Confirm"
+msgstr "Confirm"
+
+msgid "Desktop"
+msgstr "Desktop"
+
+msgid "Mic"
+msgstr "Mic"
+
+msgid "Record Desktop Audio"
+msgstr "Record Desktop Audio"
+
+msgid "Record Microphone"
+msgstr "Record Microphone"
+
+msgid "Gradient Angle"
+msgstr "Gradient Angle"
+
+msgid "Border Radius"
+msgstr "Border Radius"
+
+msgid "Frames per second"
+msgstr "Frames per second"
+
+msgid "Recording resolution"
+msgstr "Recording resolution"
+
+msgid "Select / Move"
+msgstr "Select / Move"
+
+msgid "Pen"
+msgstr "Pen"
+
+msgid "Arrow"
+msgstr "Arrow"
+
+msgid "Line"
+msgstr "Line"
+
+msgid "Rectangle"
+msgstr "Rectangle"
+
+msgid "Oval"
+msgstr "Oval"
+
+msgid "Text"
+msgstr "Text"
+
+msgid "Highlighter"
+msgstr "Highlighter"
+
+msgid "Censor"
+msgstr "Censor"
+
+msgid "Blur"
+msgstr "Blur"
+
+msgid "Number"
+msgstr "Number"
+
+msgid "Color"
+msgstr "Color"
+
+msgid "Fill"
+msgstr "Fill"
+
+msgid "Brush Size"
+msgstr "Brush Size"
+
+msgid "Font"
+msgstr "Font"
+
+msgid "Intensity"
+msgstr "Intensity"
+
+msgid "Undo"
+msgstr "Undo"
+
+msgid "Redo"
+msgstr "Redo"
+
+msgid "Quality"
+msgstr "Quality"
+
+msgid "High"
+msgstr "High"
+
+msgid "Medium"
+msgstr "Medium"
+
+msgid "Low"
+msgstr "Low"
+
+msgid "Recording quality (bitrate)"
+msgstr "Recording quality (bitrate)"
+
+msgid "Codec"
+msgstr "Codec"
+
+msgid "Edit"
+msgstr "Edit"
+
+msgid "Custom"
+msgstr "Custom"
+
+msgid "No Fill"
+msgstr "No Fill"
+
+msgid "Auto"
+msgstr "Auto"
+
+msgid "Use best available codec"
+msgstr "Use best available codec"
+
+msgid "Video codec"
+msgstr "Video codec"

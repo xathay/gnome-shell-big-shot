@@ -1,0 +1,152 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the gnome-shell-big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: gnome-shell-big-shot\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Screenshot taken"
+msgstr "Snímek obrazovky pořízen"
+#: NEEDS WORK
+msgid "Screenshots"
+msgstr "Snímky obrazovky"
+#: NEEDS WORK
+msgid "Screenshot from %s"
+msgstr "Snímek obrazovky z %s"
+#: NEEDS WORK
+msgid "Drawing canvas"
+msgstr "Kreslicí plátno"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Text…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Text anotace"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Potvrdit"
+#: NEEDS WORK
+msgid "Desktop"
+msgstr "Plocha"
+#: NEEDS WORK
+msgid "Mic"
+msgstr "Mikrofon"
+#: NEEDS WORK
+msgid "Record Desktop Audio"
+msgstr "Nahrávat zvuk plochy"
+#: NEEDS WORK
+msgid "Record Microphone"
+msgstr "Nahrávat mikrofon"
+#: NEEDS WORK
+msgid "Gradient Angle"
+msgstr "Úhel gradientu"
+#: NEEDS WORK
+msgid "Border Radius"
+msgstr "Poloměr okraje"
+#: NEEDS WORK
+msgid "Frames per second"
+msgstr "Snímky za sekundu"
+#: NEEDS WORK
+msgid "Recording resolution"
+msgstr "Rozlišení nahrávání"
+#: NEEDS WORK
+msgid "Select / Move"
+msgstr "Vybrat / Přesunout"
+#: NEEDS WORK
+msgid "Pen"
+msgstr "Pero"
+#: NEEDS WORK
+msgid "Arrow"
+msgstr "Šipka"
+#: NEEDS WORK
+msgid "Line"
+msgstr "Čára"
+#: NEEDS WORK
+msgid "Rectangle"
+msgstr "Obdélník"
+#: NEEDS WORK
+msgid "Oval"
+msgstr "Oválný"
+#: NEEDS WORK
+msgid "Text"
+msgstr "Text"
+#: NEEDS WORK
+msgid "Highlighter"
+msgstr "Zvýrazňovač"
+#: NEEDS WORK
+msgid "Censor"
+msgstr "Cenzor"
+#: NEEDS WORK
+msgid "Blur"
+msgstr "Rozostření"
+#: NEEDS WORK
+msgid "Number"
+msgstr "Číslo"
+#: NEEDS WORK
+msgid "Color"
+msgstr "Barva"
+#: NEEDS WORK
+msgid "Fill"
+msgstr "Vyplnit"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Velikost štětce"
+#: NEEDS WORK
+msgid "Font"
+msgstr "Písmo"
+#: NEEDS WORK
+msgid "Intensity"
+msgstr "Intenzita"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Zpět"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Znovu provést"
+#: NEEDS WORK
+msgid "Quality"
+msgstr "Kvalita"
+#: NEEDS WORK
+msgid "High"
+msgstr "Vysoký"
+#: NEEDS WORK
+msgid "Medium"
+msgstr "Střední"
+#: NEEDS WORK
+msgid "Low"
+msgstr "Nízká"
+#: NEEDS WORK
+msgid "Recording quality (bitrate)"
+msgstr "Kvalita záznamu (bitrate)"
+#: NEEDS WORK
+msgid "Codec"
+msgstr "Kodek"
+#: NEEDS WORK
+msgid "Edit"
+msgstr "Upravit"
+#: NEEDS WORK
+msgid "Custom"
+msgstr "Vlastní"
+#: NEEDS WORK
+msgid "No Fill"
+msgstr "Žádné vyplnění"
+#: NEEDS WORK
+msgid "Auto"
+msgstr "Automaticky"
+#: NEEDS WORK
+msgid "Use best available codec"
+msgstr "Použijte nejlepší dostupný kodek"
+#: NEEDS WORK
+msgid "Video codec"
+msgstr "Video kodek"

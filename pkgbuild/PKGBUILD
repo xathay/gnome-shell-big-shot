@@ -1,11 +1,12 @@
 # Maintainer: Tales A. Mendonça <talesam@gmail.com>
 
-pkgname=pkgbuild-template-translate
-pkgdesc="Package template for BigCommunity"
-# Uncomment and edit the following lines as needed
-#depends=('')
-#makedepends=('')
-#optdepends=('')
+pkgname=gnome-shell-big-shot
+pkgdesc="Enhanced Screenshot & Screencast for GNOME Shell — annotation tools, audio recording, FPS/resolution control"
+depends=('gnome-shell>=46' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good' 'gst-plugins-bad' 'gst-plugin-va')
+optdepends=(
+    'gst-plugins-ugly: additional codecs'
+)
+makedepends=('gettext')
 #conflicts=('')
 #provides=('')
 #replaces=('')
@@ -32,8 +33,20 @@ prepare() {
 
 build() {
     cd "${srcdir}/${pkgname}"
-    # Add build steps here, if needed
-    # For example: make
+
+    # Compile .po → .mo translations
+    local _uuid="big-shot@bigcommunity.org"
+    local _extdir="usr/share/gnome-shell/extensions/${_uuid}"
+    local _podir="${_extdir}/po"
+    local _localedir="${_extdir}/locale"
+
+    for po_file in "${_podir}"/*.po; do
+        [ -f "$po_file" ] || continue
+        local lang=$(basename "$po_file" .po)
+        local mo_dir="${_localedir}/${lang}/LC_MESSAGES"
+        mkdir -p "$mo_dir"
+        msgfmt "$po_file" -o "${mo_dir}/${_uuid}.mo"
+    done
 }
 
 check() {
@@ -63,6 +76,11 @@ package() {
     # Install license file if present
     if [ -f "LICENSE" ]; then
         install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    fi
+
+    # Ensure patch script is executable
+    if [ -f "${pkgdir}/usr/share/libalpm/scripts/gnome-shell-big-shot-screencast-fix.sh" ]; then
+        chmod 755 "${pkgdir}/usr/share/libalpm/scripts/gnome-shell-big-shot-screencast-fix.sh"
     fi
 
     # Install documentation if present

@@ -1,0 +1,152 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the gnome-shell-big-shot package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: gnome-shell-big-shot\n"
+"Report-Msgid-Bugs-To: \n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: attranslate\n"
+#: NEEDS WORK
+msgid "Screenshot taken"
+msgstr "Näyttökuva otettu"
+#: NEEDS WORK
+msgid "Screenshots"
+msgstr "Näyttökuvat"
+#: NEEDS WORK
+msgid "Screenshot from %s"
+msgstr "Näyttökuva %s:stä"
+#: NEEDS WORK
+msgid "Drawing canvas"
+msgstr "Piirtoalusta"
+#: NEEDS WORK
+msgid "Text…"
+msgstr "Teksti…"
+#: NEEDS WORK
+msgid "Annotation text"
+msgstr "Annotaatioteksti"
+#: NEEDS WORK
+msgid "Confirm"
+msgstr "Vahvista"
+#: NEEDS WORK
+msgid "Desktop"
+msgstr "Työpöytä"
+#: NEEDS WORK
+msgid "Mic"
+msgstr "Mikrofoni"
+#: NEEDS WORK
+msgid "Record Desktop Audio"
+msgstr "Tallenna työpöydän ääni"
+#: NEEDS WORK
+msgid "Record Microphone"
+msgstr "Tallenna mikrofoni"
+#: NEEDS WORK
+msgid "Gradient Angle"
+msgstr "Gradientin kulma"
+#: NEEDS WORK
+msgid "Border Radius"
+msgstr "Reunakulma"
+#: NEEDS WORK
+msgid "Frames per second"
+msgstr "Kuvakehyksiä sekunnissa"
+#: NEEDS WORK
+msgid "Recording resolution"
+msgstr "Tallennusresoluutio"
+#: NEEDS WORK
+msgid "Select / Move"
+msgstr "Valitse / Siirrä"
+#: NEEDS WORK
+msgid "Pen"
+msgstr "Kynä"
+#: NEEDS WORK
+msgid "Arrow"
+msgstr "Nuoli"
+#: NEEDS WORK
+msgid "Line"
+msgstr "Rivi"
+#: NEEDS WORK
+msgid "Rectangle"
+msgstr "Suorakulmio"
+#: NEEDS WORK
+msgid "Oval"
+msgstr "Soikio"
+#: NEEDS WORK
+msgid "Text"
+msgstr "Teksti"
+#: NEEDS WORK
+msgid "Highlighter"
+msgstr "Korostin"
+#: NEEDS WORK
+msgid "Censor"
+msgstr "Sensuuri"
+#: NEEDS WORK
+msgid "Blur"
+msgstr "Sume"
+#: NEEDS WORK
+msgid "Number"
+msgstr "Numero"
+#: NEEDS WORK
+msgid "Color"
+msgstr "Väri"
+#: NEEDS WORK
+msgid "Fill"
+msgstr "Täytä"
+#: NEEDS WORK
+msgid "Brush Size"
+msgstr "Harjan koko"
+#: NEEDS WORK
+msgid "Font"
+msgstr "Fontti"
+#: NEEDS WORK
+msgid "Intensity"
+msgstr "Intensiteetti"
+#: NEEDS WORK
+msgid "Undo"
+msgstr "Kumoa"
+#: NEEDS WORK
+msgid "Redo"
+msgstr "Uudelleen tehdä"
+#: NEEDS WORK
+msgid "Quality"
+msgstr "Laatu"
+#: NEEDS WORK
+msgid "High"
+msgstr "Korkea"
+#: NEEDS WORK
+msgid "Medium"
+msgstr "Keskikokoinen"
+#: NEEDS WORK
+msgid "Low"
+msgstr "Alhainen"
+#: NEEDS WORK
+msgid "Recording quality (bitrate)"
+msgstr "Tallennuslaatu (bitrate)"
+#: NEEDS WORK
+msgid "Codec"
+msgstr "Koodekki"
+#: NEEDS WORK
+msgid "Edit"
+msgstr "Muokkaa"
+#: NEEDS WORK
+msgid "Custom"
+msgstr "Mukautettu"
+#: NEEDS WORK
+msgid "No Fill"
+msgstr "Ei täyttöä"
+#: NEEDS WORK
+msgid "Auto"
+msgstr "Auto"
+#: NEEDS WORK
+msgid "Use best available codec"
+msgstr "Käytä parasta saatavilla olevaa koodekkia"
+#: NEEDS WORK
+msgid "Video codec"
+msgstr "Videokoodekki"
