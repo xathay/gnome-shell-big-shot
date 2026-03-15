@@ -227,12 +227,12 @@ export class PartToolbar extends PartUI {
         // Add floating panel directly to screenshotUI (NOT inside native _panel)
         this._ui.add_child(this._editPanel);
 
-        // === Video Settings Panel (floating, styled to match native GNOME UI) ===
+        // === Video Settings Panel (floating, docks above native panel) ===
         this._videoSettingsPanel = new St.BoxLayout({
             vertical: true,
             visible: false,
             reactive: true,
-            style: 'background-color: rgba(30, 30, 30, 0.95); border-radius: 18px; padding: 12px 16px; spacing: 10px;',
+            style: 'background-color: rgba(30, 30, 30, 0.90); border-radius: 24px 24px 0 0; border: 1px solid rgba(255, 255, 255, 0.04); border-bottom-width: 0; padding: 12px 16px; spacing: 10px;',
         });
 
         // Row 1: Quality label + buttons
@@ -290,47 +290,89 @@ export class PartToolbar extends PartUI {
         });
         this._editButton.connect('notify::checked', () => {
             this._editMode = this._editButton.checked;
+            const panel = this._ui._panel;
             if (this._isCastMode) {
                 // Video mode: show video settings panel
                 this._editPanel.visible = false;
                 this._videoSettingsPanel.visible = this._editMode;
                 if (this._videoSettingsPanel.visible) {
                     this._populateVideoCodecs();
+                    this._connectPanel();
                     GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                         this._repositionVideoSettingsPanel();
                         return GLib.SOURCE_REMOVE;
                     });
+                } else {
+                    this._disconnectPanel();
                 }
             } else {
                 // Screenshot mode: show annotation tools
                 this._videoSettingsPanel.visible = false;
                 this._editPanel.visible = this._editMode;
                 if (this._editPanel.visible) {
+                    this._connectPanel();
                     GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
                         this._repositionEditPanel();
+                        // Slide-in animation
+                        this._editPanel.opacity = 0;
+                        this._editPanel.ease({
+                            opacity: 255,
+                            duration: 200,
+                            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                        });
                         return GLib.SOURCE_REMOVE;
                     });
                 } else {
+                    this._disconnectPanel();
                     this.selectTool(null);
                 }
             }
         });
 
-        // Place in show-pointer container (right side of bottom bar)
-        const showPointerContainer = this._ui._showPointerButtonContainer;
-        if (showPointerContainer) {
-            showPointerContainer.insert_child_at_index(this._editButton, 0);
+        // Place edit button directly in the native _panel for reliable
+        // visibility in both screenshot and screencast modes (GNOME 49+).
+        // _showPointerButtonContainer is hidden in screencast mode.
+        const nativePanel = this._ui._panel;
+        if (nativePanel) {
+            nativePanel.add_child(this._editButton);
         } else {
-            // Fallback: add to bottom row
-            const bottomRow = this._ui._bottomRowContainer;
-            if (bottomRow) bottomRow.add_child(this._editButton);
+            const showPointerContainer = this._ui._showPointerButtonContainer;
+            if (showPointerContainer) {
+                showPointerContainer.insert_child_at_index(this._editButton, 0);
+            } else {
+                const bottomRow = this._ui._bottomRowContainer;
+                if (bottomRow) bottomRow.add_child(this._editButton);
+            }
         }
 
         this._connectSignal(this._ui, 'notify::visible', () => this._onUIVisibilityChanged());
     }
 
     /**
-     * Position the floating edit panel centered above the native panel.
+     * Apply inline style to flatten the top corners of the native panel
+     * so the edit/video panel docks visually flush.
+     * Inline style overrides .screenshot-ui-panel { border-radius: 32px }
+     * that cannot be beaten by an added CSS class.
+     */
+    _connectPanel() {
+        const panel = this._ui._panel;
+        if (!panel) return;
+        if (this._nativePanelOrigStyle === undefined)
+            this._nativePanelOrigStyle = panel.style ?? '';
+        panel.style = `${this._nativePanelOrigStyle} border-radius: 0 0 32px 32px;`;
+    }
+
+    /** Restore original border-radius on the native panel. */
+    _disconnectPanel() {
+        const panel = this._ui._panel;
+        if (!panel) return;
+        if (this._nativePanelOrigStyle !== undefined)
+            panel.style = this._nativePanelOrigStyle;
+    }
+
+    /**
+     * Position the floating edit panel centered above the native panel (flush — 0 gap).
+     * Matching the panel width for a unified visual appearance.
      */
     _repositionEditPanel() {
         if (!this._editPanel?.visible) return;
@@ -340,9 +382,10 @@ export class PartToolbar extends PartUI {
         const pw = panel.width;
         const epw = this._editPanel.width;
         const eph = this._editPanel.height;
+        // Center horizontally, flush vertically (0 gap)
         this._editPanel.set_position(
             px + (pw - epw) / 2,
-            py - eph - 12
+            py - eph
         );
     }
 
@@ -818,7 +861,7 @@ export class PartToolbar extends PartUI {
         const eph = this._videoSettingsPanel.height;
         this._videoSettingsPanel.set_position(
             px + (pw - epw) / 2,
-            py - eph - 12
+            py - eph
         );
     }
 
@@ -860,8 +903,10 @@ export class PartToolbar extends PartUI {
             if (this._isCastMode) {
                 this._editPanel.visible = false;
                 this.selectTool(null);
-                if (this._editMode)
+                if (this._editMode) {
                     this._videoSettingsPanel.visible = true;
+                    this._connectPanel();
+                }
             } else {
                 this._videoSettingsPanel.visible = false;
             }
@@ -870,6 +915,7 @@ export class PartToolbar extends PartUI {
             this._editMode = false;
             this._editPanel.visible = false;
             this._videoSettingsPanel.visible = false;
+            this._disconnectPanel();
             this.selectTool(null);
         }
     }
@@ -881,10 +927,12 @@ export class PartToolbar extends PartUI {
         this._editMode = false;
         this._editPanel.visible = false;
         this._videoSettingsPanel.visible = false;
+        this._disconnectPanel();
         this.selectTool(null);
     }
 
     destroy() {
+        this._disconnectPanel();
         this._closeColorPopup();
         this._closeSizePopup();
         this._closeFontPopup();
