@@ -92,6 +92,9 @@ export class PartToolbar extends PartUI {
 
         this._editContainer.connect('button-press-event', (_actor, event) => {
             if (event.get_button() !== 1) return Clutter.EVENT_PROPAGATE;
+            // Only start drag from the container background, not child buttons
+            const source = event.get_source();
+            if (source !== this._editContainer) return Clutter.EVENT_PROPAGATE;
             const [mx, my] = event.get_coords();
             const [ax, ay] = this._editContainer.get_transformed_position();
             this._dragging = true;
@@ -99,7 +102,7 @@ export class PartToolbar extends PartUI {
             this._dragStartY = my;
             this._dragOffsetX = ax - mx;
             this._dragOffsetY = ay - my;
-            return Clutter.EVENT_PROPAGATE; // let buttons handle their own clicks
+            return Clutter.EVENT_STOP;
         });
 
         this._editContainer.connect('motion-event', (_actor, event) => {
@@ -188,11 +191,24 @@ export class PartToolbar extends PartUI {
         this._fillButton.connect('leave-event', () => this._hideTooltip());
         this._editContainer.add_child(this._fillButton);
 
-        // Brush size
+        // Brush size with +/- buttons
+        const sizeBox = new St.BoxLayout({ style: 'spacing: 0px;' });
+        const sizeDecBtn = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Label({ text: '−', style: 'color: #ffffff; font-size: 14px;', y_align: Clutter.ActorAlign.CENTER }),
+            can_focus: true,
+            accessible_name: _('Decrease Size'),
+        });
+        sizeDecBtn.connect('clicked', () => {
+            this._setBrushSize(Math.max(this.brushSize - 1, 1));
+        });
+        sizeBox.add_child(sizeDecBtn);
+
         this._sizeLabel = new St.Label({
             text: '3',
-            style: 'color: #ffffff; font-size: 12px;',
+            style: 'color: #ffffff; font-size: 12px; min-width: 20px; text-align: center;',
             y_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.CENTER,
         });
         this._sizeButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
@@ -216,9 +232,20 @@ export class PartToolbar extends PartUI {
             this._setBrushSize(sz);
             return Clutter.EVENT_STOP;
         });
-        this._sizeButton.connect('enter-event', () => this._showTooltip(this._sizeButton, _('Brush Size')));
-        this._sizeButton.connect('leave-event', () => this._hideTooltip());
-        this._editContainer.add_child(this._sizeButton);
+        sizeBox.add_child(this._sizeButton);
+
+        const sizeIncBtn = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Label({ text: '+', style: 'color: #ffffff; font-size: 14px;', y_align: Clutter.ActorAlign.CENTER }),
+            can_focus: true,
+            accessible_name: _('Increase Size'),
+        });
+        sizeIncBtn.connect('clicked', () => {
+            this._setBrushSize(Math.min(this.brushSize + 1, 100));
+        });
+        sizeBox.add_child(sizeIncBtn);
+
+        this._editContainer.add_child(sizeBox);
 
         // Font selector (visible only for Text tool)
         this._fontLabel = new St.Label({
