@@ -84,11 +84,15 @@ export class PartToolbar extends PartUI {
         });
 
         // Drag handle — visible grippy area for dragging
-        this._dragHandle = new St.Icon({
-            icon_name: 'view-more-symbolic',
-            icon_size: 14,
-            style: 'color: rgba(255,255,255,0.4); padding: 0 2px;',
+        this._dragHandle = new St.Bin({
+            child: new St.Icon({
+                icon_name: 'open-menu-symbolic',
+                icon_size: 16,
+                style: 'color: rgba(255,255,255,0.5);',
+            }),
             reactive: true,
+            track_hover: true,
+            style: 'padding: 4px 6px; cursor: grab;',
         });
         this._editContainer.add_child(this._dragHandle);
 
@@ -99,12 +103,9 @@ export class PartToolbar extends PartUI {
         this._dragOffsetX = 0;
         this._dragOffsetY = 0;
 
-        this._editContainer.connect('button-press-event', (_actor, event) => {
+        // Start drag from drag handle
+        this._dragHandle.connect('button-press-event', (_actor, event) => {
             if (event.get_button() !== 1) return Clutter.EVENT_PROPAGATE;
-            // Allow drag from container background or drag handle
-            const source = event.get_source();
-            if (source !== this._editContainer && source !== this._dragHandle)
-                return Clutter.EVENT_PROPAGATE;
             const [mx, my] = event.get_coords();
             const [ax, ay] = this._editContainer.get_transformed_position();
             this._dragging = true;
@@ -115,21 +116,26 @@ export class PartToolbar extends PartUI {
             return Clutter.EVENT_STOP;
         });
 
-        this._editContainer.connect('motion-event', (_actor, event) => {
+        // Motion and release: listen on the global stage so drag works
+        // even if cursor leaves the container
+        this._dragMotionId = this._ui.connect('captured-event', (_actor, event) => {
             if (!this._dragging) return Clutter.EVENT_PROPAGATE;
-            const [mx, my] = event.get_coords();
-            const dx = mx - this._dragStartX;
-            const dy = my - this._dragStartY;
-            if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return Clutter.EVENT_PROPAGATE;
-            this._editContainer.set_position(
-                mx + this._dragOffsetX,
-                my + this._dragOffsetY,
-            );
-            return Clutter.EVENT_STOP;
-        });
-
-        this._editContainer.connect('button-release-event', () => {
-            this._dragging = false;
+            const type = event.type();
+            if (type === Clutter.EventType.MOTION) {
+                const [mx, my] = event.get_coords();
+                const dx = mx - this._dragStartX;
+                const dy = my - this._dragStartY;
+                if (Math.abs(dx) < 4 && Math.abs(dy) < 4)
+                    return Clutter.EVENT_PROPAGATE;
+                this._editContainer.set_position(
+                    mx + this._dragOffsetX,
+                    my + this._dragOffsetY,
+                );
+                return Clutter.EVENT_STOP;
+            } else if (type === Clutter.EventType.BUTTON_RELEASE) {
+                this._dragging = false;
+                return Clutter.EVENT_STOP;
+            }
             return Clutter.EVENT_PROPAGATE;
         });
 
@@ -1125,6 +1131,10 @@ export class PartToolbar extends PartUI {
     }
 
     destroy() {
+        if (this._dragMotionId) {
+            this._ui.disconnect(this._dragMotionId);
+            this._dragMotionId = 0;
+        }
         this._detachEditFromPanel();
         this._detachVideoFromPanel();
         this._closeColorPopup();

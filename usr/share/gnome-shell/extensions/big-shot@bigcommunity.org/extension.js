@@ -1047,6 +1047,45 @@ export default class BigShotExtension extends Extension {
     }
 
     /**
+     * Collapse or restore the native GNOME screenshot panel.
+     */
+    _setNativePanelCollapsed(collapsed) {
+        const ui = this._screenshotUI;
+        if (!ui) return;
+
+        const panel = ui._panel;
+        const closeBtn = ui._closeButton;
+        if (!panel) return;
+
+        const duration = 200;
+        const mode = Clutter.AnimationMode.EASE_OUT_QUAD;
+
+        if (collapsed) {
+            panel.ease({
+                opacity: 0,
+                duration,
+                mode,
+                onComplete: () => { panel.visible = false; },
+            });
+            if (closeBtn) {
+                closeBtn.ease({
+                    opacity: 0,
+                    duration,
+                    mode,
+                    onComplete: () => { closeBtn.visible = false; },
+                });
+            }
+        } else {
+            panel.visible = true;
+            panel.ease({ opacity: 255, duration, mode });
+            if (closeBtn) {
+                closeBtn.visible = true;
+                closeBtn.ease({ opacity: 255, duration, mode });
+            }
+        }
+    }
+
+    /**
      * Show a desktop notification via GNOME Shell.
      */
     _showNotification(title, body) {
@@ -1142,6 +1181,9 @@ export default class BigShotExtension extends Extension {
                 const isDrawTool = toolId !== null;
                 overlay.setReactive(isDrawTool);
             }
+
+            // Collapse native panel when a drawing tool is active
+            this._setNativePanelCollapsed(toolId !== null);
         });
 
         // Wire action buttons (copy, save-as, cloud, share)
