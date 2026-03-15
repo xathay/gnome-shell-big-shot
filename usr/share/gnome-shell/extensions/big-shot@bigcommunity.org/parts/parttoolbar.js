@@ -83,6 +83,15 @@ export class PartToolbar extends PartUI {
             reactive: true,
         });
 
+        // Drag handle — visible grippy area for dragging
+        this._dragHandle = new St.Icon({
+            icon_name: 'view-more-symbolic',
+            icon_size: 14,
+            style: 'color: rgba(255,255,255,0.4); padding: 0 2px;',
+            reactive: true,
+        });
+        this._editContainer.add_child(this._dragHandle);
+
         // Drag state
         this._dragging = false;
         this._dragStartX = 0;
@@ -92,9 +101,10 @@ export class PartToolbar extends PartUI {
 
         this._editContainer.connect('button-press-event', (_actor, event) => {
             if (event.get_button() !== 1) return Clutter.EVENT_PROPAGATE;
-            // Only start drag from the container background, not child buttons
+            // Allow drag from container background or drag handle
             const source = event.get_source();
-            if (source !== this._editContainer) return Clutter.EVENT_PROPAGATE;
+            if (source !== this._editContainer && source !== this._dragHandle)
+                return Clutter.EVENT_PROPAGATE;
             const [mx, my] = event.get_coords();
             const [ax, ay] = this._editContainer.get_transformed_position();
             this._dragging = true;
@@ -1015,6 +1025,46 @@ export class PartToolbar extends PartUI {
         this._actionCallback = callback;
     }
 
+    /**
+     * Show a brief inline status message on the toolbar.
+     */
+    showInlineMessage(text) {
+        this._clearInlineMessage();
+        this._inlineMsg = new St.Label({
+            text,
+            style: 'color: #ffffff; font-size: 11px; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 8px;',
+        });
+        if (this._editContainer.get_parent()) {
+            this._ui.add_child(this._inlineMsg);
+            const [cx, cy] = this._editContainer.get_transformed_position();
+            const cw = this._editContainer.width;
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                if (!this._inlineMsg) return GLib.SOURCE_REMOVE;
+                const mw = this._inlineMsg.width;
+                this._inlineMsg.set_position(
+                    cx + (cw - mw) / 2,
+                    cy - this._inlineMsg.height - 6);
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+        this._inlineMsgTimer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 4000, () => {
+            this._inlineMsgTimer = 0;
+            this._clearInlineMessage();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _clearInlineMessage() {
+        if (this._inlineMsgTimer) {
+            GLib.source_remove(this._inlineMsgTimer);
+            this._inlineMsgTimer = 0;
+        }
+        if (this._inlineMsg) {
+            this._inlineMsg.destroy();
+            this._inlineMsg = null;
+        }
+    }
+
     _showTooltip(button, text) {
         this._hideTooltip();
         this._tooltip = new St.Label({
@@ -1082,6 +1132,7 @@ export class PartToolbar extends PartUI {
         this._closeFontPopup();
         this._closeIntensityPopup();
         this._hideTooltip();
+        this._clearInlineMessage();
 
         if (this._editButton) {
             const p = this._editButton.get_parent();

@@ -759,17 +759,17 @@ export default class BigShotExtension extends Extension {
                 const configFile = Gio.File.new_for_path(configPath);
 
                 if (!configFile.query_exists(null)) {
-                    this._showNotification(
-                        _('Cloud not configured'),
-                        _('Create %s with url, username, password, folder fields').format(configPath));
+                    console.log(`[Big Shot] Cloud config not found: ${configPath}`);
+                    this._toolbar.showInlineMessage(
+                        _('Configure: %s').format(configPath));
                     return;
                 }
 
                 const [, configData] = configFile.load_contents(null);
                 const config = JSON.parse(new TextDecoder().decode(configData));
                 if (!config.url || !config.username || !config.password) {
-                    this._showNotification(_('Cloud config incomplete'),
-                        _('Missing url, username, or password in %s').format(configPath));
+                    this._toolbar.showInlineMessage(
+                        _('Cloud config incomplete: url, username, password'));
                     return;
                 }
 
@@ -788,17 +788,17 @@ export default class BigShotExtension extends Extension {
                 const configFile = Gio.File.new_for_path(configPath);
 
                 if (!configFile.query_exists(null)) {
-                    this._showNotification(
-                        _('Share not configured'),
-                        _('Create %s with url, method, responseUrlField fields').format(configPath));
+                    console.log(`[Big Shot] Share config not found: ${configPath}`);
+                    this._toolbar.showInlineMessage(
+                        _('Configure: %s').format(configPath));
                     return;
                 }
 
                 const [, configData] = configFile.load_contents(null);
                 const config = JSON.parse(new TextDecoder().decode(configData));
                 if (!config.url) {
-                    this._showNotification(_('Share config incomplete'),
-                        _('Missing url in %s').format(configPath));
+                    this._toolbar.showInlineMessage(
+                        _('Share config incomplete: needs url'));
                     return;
                 }
 
@@ -1063,8 +1063,14 @@ export default class BigShotExtension extends Extension {
             });
             source.addNotification(notification);
         } catch (e) {
-            // Fallback: just log
-            console.log(`[Big Shot] Notification: ${title} — ${body}`);
+            console.log(`[Big Shot] Notification fallback: ${title} — ${body}`);
+            // Fallback: show as OSD via Main.osdWindowManager
+            try {
+                const monitor = global.display.get_current_monitor();
+                Main.osdWindowManager.show(monitor, null, `${title}: ${body}`, -1);
+            } catch (_e2) {
+                // Last resort: just console log
+            }
         }
     }
 
