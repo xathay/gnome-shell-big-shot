@@ -917,13 +917,11 @@ export default class BigShotExtension extends Extension {
         const folder = config.folder || '/Screenshots';
         const uploadUrl = `${config.url.replace(/\/$/, '')}/remote.php/dav/files/${config.username}${folder}/${fileName}`;
 
-        const auth = GLib.base64_encode(`${config.username}:${config.password}`);
-
         try {
             const proc = Gio.Subprocess.new(
                 ['curl', '-sS', '-o', '/dev/null', '-w', '%{http_code}',
                     '-X', 'PUT',
-                    '-H', `Authorization: Basic ${auth}`,
+                    '-u', `${config.username}:${config.password}`,
                     '-H', 'Content-Type: image/png',
                     '--data-binary', '@-',
                     uploadUrl],
