@@ -96,17 +96,22 @@ export class PartToolbar extends PartUI {
         });
         this._editContainer.add_child(this._dragHandle);
 
-        // Toggle native panel visibility
+        // Toggle native panel visibility — separator + button
+        const panelSep = new St.Widget({
+            style: 'background: rgba(255,255,255,0.15); min-width: 1px; margin: 4px 2px;',
+            y_expand: true,
+        });
+        this._editContainer.add_child(panelSep);
+
         this._panelToggleBtn = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
             child: new St.Icon({
-                icon_name: 'go-down-symbolic',
-                icon_size: 14,
-                style: 'color: rgba(255,255,255,0.5);',
+                icon_name: 'view-reveal-symbolic',
+                icon_size: 16,
+                style: 'color: rgba(255,255,255,0.6);',
             }),
             can_focus: true,
             accessible_name: _('Show screenshot panel'),
-            style: 'padding: 2px 4px;',
         });
         this._panelToggleBtn.connect('clicked', () => {
             this.selectTool(null);

@@ -1230,7 +1230,7 @@ export default class BigShotExtension extends Extension {
         backdrop.add_child(dialog);
 
         this._cloudConfigDialog = backdrop;
-        ui.add_child(backdrop);
+        global.stage.add_child(backdrop);
         console.log(`[Big Shot] Cloud dialog added to UI, backdrop visible=${backdrop.visible}, size=${backdrop.width}x${backdrop.height}`);
 
         // Focus the URL field
@@ -1393,7 +1393,7 @@ export default class BigShotExtension extends Extension {
         backdrop.add_child(dialog);
 
         this._shareConfigDialog = backdrop;
-        ui.add_child(backdrop);
+        global.stage.add_child(backdrop);
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
             urlEntry.grab_key_focus();
