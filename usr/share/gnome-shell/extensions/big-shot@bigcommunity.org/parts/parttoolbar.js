@@ -123,8 +123,8 @@ export class PartToolbar extends PartUI {
             return Clutter.EVENT_PROPAGATE;
         });
 
-        // Semi-transparent by default, opaque on hover
-        this._editContainer.opacity = 180;
+        // 90% opacity by default, fully opaque on hover
+        this._editContainer.opacity = 230;
         this._editContainer.connect('enter-event', () => {
             this._editContainer.ease({
                 opacity: 255,
@@ -135,7 +135,7 @@ export class PartToolbar extends PartUI {
         this._editContainer.connect('leave-event', () => {
             if (this._dragging) return;
             this._editContainer.ease({
-                opacity: 180,
+                opacity: 230,
                 duration: 300,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             });
@@ -335,6 +335,57 @@ export class PartToolbar extends PartUI {
         this._redoButton.connect('leave-event', () => this._hideTooltip());
         this._editContainer.add_child(this._redoButton);
 
+        // Separator before action buttons
+        this._editContainer.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
+
+        // Copy to clipboard
+        this._copyButton = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ icon_name: 'edit-copy-symbolic', icon_size: 18 }),
+            can_focus: true,
+            accessible_name: _('Copy to Clipboard'),
+        });
+        this._copyButton.connect('clicked', () => this._onCopyClicked());
+        this._copyButton.connect('enter-event', () => this._showTooltip(this._copyButton, _('Copy to Clipboard')));
+        this._copyButton.connect('leave-event', () => this._hideTooltip());
+        this._editContainer.add_child(this._copyButton);
+
+        // Save As (file chooser via portal)
+        this._saveAsButton = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ icon_name: 'document-save-as-symbolic', icon_size: 18 }),
+            can_focus: true,
+            accessible_name: _('Save As…'),
+        });
+        this._saveAsButton.connect('clicked', () => this._onSaveAsClicked());
+        this._saveAsButton.connect('enter-event', () => this._showTooltip(this._saveAsButton, _('Save As…')));
+        this._saveAsButton.connect('leave-event', () => this._hideTooltip());
+        this._editContainer.add_child(this._saveAsButton);
+
+        // Cloud upload (Nextcloud WebDAV)
+        this._cloudButton = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ gicon: this._getIcon('big-shot-cloud-upload-symbolic'), icon_size: 18 }),
+            can_focus: true,
+            accessible_name: _('Upload to Cloud'),
+        });
+        this._cloudButton.connect('clicked', () => this._onCloudClicked());
+        this._cloudButton.connect('enter-event', () => this._showTooltip(this._cloudButton, _('Upload to Cloud (Nextcloud)')));
+        this._cloudButton.connect('leave-event', () => this._hideTooltip());
+        this._editContainer.add_child(this._cloudButton);
+
+        // Share link (upload to custom endpoint)
+        this._shareButton = new St.Button({
+            style_class: 'big-shot-edit-tool-btn',
+            child: new St.Icon({ gicon: this._getIcon('big-shot-share-link-symbolic'), icon_size: 18 }),
+            can_focus: true,
+            accessible_name: _('Share Link'),
+        });
+        this._shareButton.connect('clicked', () => this._onShareClicked());
+        this._shareButton.connect('enter-event', () => this._showTooltip(this._shareButton, _('Upload and share link')));
+        this._shareButton.connect('leave-event', () => this._hideTooltip());
+        this._editContainer.add_child(this._shareButton);
+
         // NOTE: _editContainer is NOT added to a parent yet.
         // It gets inserted into _panel when edit mode is toggled ON.
 
@@ -450,7 +501,7 @@ export class PartToolbar extends PartUI {
         // Fade-in
         this._editContainer.opacity = 0;
         this._editContainer.ease({
-            opacity: 180,
+            opacity: 230,
             duration: 200,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
@@ -942,6 +993,27 @@ export class PartToolbar extends PartUI {
 
     _onUndo() { }
     _onRedo() { }
+
+    // --- Action button handlers ---
+    _onCopyClicked() {
+        this._actionCallback?.('copy');
+    }
+
+    _onSaveAsClicked() {
+        this._actionCallback?.('save-as');
+    }
+
+    _onCloudClicked() {
+        this._actionCallback?.('cloud');
+    }
+
+    _onShareClicked() {
+        this._actionCallback?.('share');
+    }
+
+    onAction(callback) {
+        this._actionCallback = callback;
+    }
 
     _showTooltip(button, text) {
         this._hideTooltip();

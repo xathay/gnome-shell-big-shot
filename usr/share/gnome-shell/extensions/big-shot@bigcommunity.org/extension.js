@@ -13,6 +13,7 @@ import St from 'gi://St';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import cairo from 'gi://cairo';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 import { Extension, gettext as _ } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Screenshot from 'resource:///org/gnome/shell/ui/screenshot.js';
 
@@ -595,6 +596,478 @@ export default class BigShotExtension extends Extension {
         }
     }
 
+    // =========================================================================
+    // ACTION BUTTONS — Copy, Save As, Cloud Upload, Share
+    // =========================================================================
+
+    /**
+     * Capture current screenshot and composite annotations into PNG bytes.
+     * Returns { bytes: GLib.Bytes, pixbuf: GdkPixbuf.Pixbuf } or null on failure.
+     */
+    async _captureAnnotatedBytes() {
+        const ui = this._screenshotUI;
+        const overlay = this._annotation?._overlay;
+        const actions = overlay?._actions ?? [];
+
+        let texture, geometry, cursorTexture, cursorX, cursorY, cursorScale, bufScale;
+
+        if (ui._selectionButton.checked || ui._screenButton.checked) {
+            const content = ui._stageScreenshot.get_content();
+            if (!content) return null;
+            texture = content.get_texture();
+            geometry = ui._getSelectedGeometry(true);
+            bufScale = ui._scale;
+            cursorTexture = ui._cursor.content?.get_texture();
+            if (!ui._cursor.visible) cursorTexture = null;
+            cursorX = ui._cursor.x * bufScale;
+            cursorY = ui._cursor.y * bufScale;
+            cursorScale = ui._cursorScale;
+        } else if (ui._windowButton.checked) {
+            const window = ui._windowSelectors
+                .flatMap(s => s.windows())
+                .find(win => win.checked);
+            if (!window) return null;
+            const content = window.windowContent;
+            if (!content) return null;
+            texture = content.get_texture();
+            geometry = null;
+            bufScale = window.bufferScale;
+            cursorTexture = window.getCursorTexture()?.get_texture();
+            if (!ui._cursor.visible) cursorTexture = null;
+            cursorX = window.cursorPoint.x * bufScale;
+            cursorY = window.cursorPoint.y * bufScale;
+            cursorScale = ui._cursorScale;
+        }
+
+        if (!texture) return null;
+
+        const [gx, gy, gw, gh] = geometry ?? [0, 0, -1, -1];
+        const stream = Gio.MemoryOutputStream.new_resizable();
+        const pixbuf = await Shell.Screenshot.composite_to_stream(
+            texture, gx, gy, gw, gh, bufScale,
+            cursorTexture ?? null, cursorX ?? 0, cursorY ?? 0, cursorScale ?? 1,
+            stream
+        );
+        stream.close(null);
+
+        if (!pixbuf) return null;
+
+        if (actions.length === 0) {
+            const bytes = stream.steal_as_bytes();
+            return { bytes, pixbuf };
+        }
+
+        const offsetX = gx / bufScale;
+        const offsetY = gy / bufScale;
+        const tmpDir = GLib.get_tmp_dir();
+        const tmpBase = GLib.build_filenamev([tmpDir, `bigshot-base-${Date.now()}.png`]);
+        const tmpAnnotated = GLib.build_filenamev([tmpDir, `bigshot-ann-${Date.now()}.png`]);
+
+        try {
+            const toWidget = (x, y) => [
+                (x - offsetX) * bufScale,
+                (y - offsetY) * bufScale,
+            ];
+            const drawScale = 1.0;
+
+            let workPixbuf = pixbuf;
+            for (const action of actions) {
+                if (typeof action.drawReal === 'function') {
+                    try {
+                        const result = action.drawReal(workPixbuf, GdkPixbuf, GLib, toWidget, drawScale);
+                        if (result) workPixbuf = result;
+                    } catch (err) {
+                        console.error(`[Big Shot] drawReal failed: ${err.message}`);
+                    }
+                }
+            }
+
+            workPixbuf.savev(tmpBase, 'png', [], []);
+            const surface = cairo.ImageSurface.createFromPNG(tmpBase);
+            const cr = new cairo.Context(surface);
+
+            for (const action of actions) {
+                if (typeof action.drawReal !== 'function') {
+                    cr.save();
+                    action.draw(cr, toWidget, drawScale);
+                    cr.restore();
+                }
+            }
+
+            surface.writeToPNG(tmpAnnotated);
+            surface.finish();
+
+            const annotPixbuf = GdkPixbuf.Pixbuf.new_from_file(tmpAnnotated);
+            const bytes = this._pixbufToBytes(annotPixbuf);
+            return { bytes, pixbuf: annotPixbuf };
+        } finally {
+            try { Gio.File.new_for_path(tmpBase).delete(null); } catch (_e) { /* */ }
+            try { Gio.File.new_for_path(tmpAnnotated).delete(null); } catch (_e) { /* */ }
+        }
+    }
+
+    /**
+     * Handle action button clicks from the toolbar.
+     */
+    async _handleAction(action) {
+        const ui = this._screenshotUI;
+
+        try {
+            const result = await this._captureAnnotatedBytes();
+            if (!result) {
+                console.error('[Big Shot] Failed to capture screenshot');
+                return;
+            }
+
+            const { bytes, pixbuf } = result;
+
+            switch (action) {
+            case 'copy': {
+                const clipboard = St.Clipboard.get_default();
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+                global.display.get_sound_player().play_from_theme(
+                    'screen-capture', _('Screenshot copied'), null);
+                console.log('[Big Shot] Screenshot copied to clipboard');
+                ui.close();
+                break;
+            }
+
+            case 'save-as': {
+                // Save to temp file, then open portal file chooser
+                const tmpPath = GLib.build_filenamev([
+                    GLib.get_tmp_dir(), `bigshot-saveas-${Date.now()}.png`]);
+                const tmpFile = Gio.File.new_for_path(tmpPath);
+                const outStream = tmpFile.create(Gio.FileCreateFlags.NONE, null);
+                outStream.write_bytes(bytes, null);
+                outStream.close(null);
+
+                // Also copy to clipboard
+                const clipboard = St.Clipboard.get_default();
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+
+                ui.close();
+
+                // Open file chooser via xdg-desktop-portal
+                this._openSaveDialog(tmpPath, pixbuf);
+                break;
+            }
+
+            case 'cloud': {
+                // Nextcloud WebDAV upload
+                const configPath = GLib.build_filenamev([
+                    GLib.get_user_config_dir(), 'big-shot', 'cloud.json']);
+                const configFile = Gio.File.new_for_path(configPath);
+
+                if (!configFile.query_exists(null)) {
+                    this._showNotification(
+                        _('Cloud not configured'),
+                        _('Create %s with url, username, password, folder fields').format(configPath));
+                    return;
+                }
+
+                const [, configData] = configFile.load_contents(null);
+                const config = JSON.parse(new TextDecoder().decode(configData));
+                if (!config.url || !config.username || !config.password) {
+                    this._showNotification(_('Cloud config incomplete'),
+                        _('Missing url, username, or password in %s').format(configPath));
+                    return;
+                }
+
+                const clipboard = St.Clipboard.get_default();
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+
+                ui.close();
+
+                this._uploadToNextcloud(bytes, config);
+                break;
+            }
+
+            case 'share': {
+                const configPath = GLib.build_filenamev([
+                    GLib.get_user_config_dir(), 'big-shot', 'share.json']);
+                const configFile = Gio.File.new_for_path(configPath);
+
+                if (!configFile.query_exists(null)) {
+                    this._showNotification(
+                        _('Share not configured'),
+                        _('Create %s with url, method, responseUrlField fields').format(configPath));
+                    return;
+                }
+
+                const [, configData] = configFile.load_contents(null);
+                const config = JSON.parse(new TextDecoder().decode(configData));
+                if (!config.url) {
+                    this._showNotification(_('Share config incomplete'),
+                        _('Missing url in %s').format(configPath));
+                    return;
+                }
+
+                const clipboard = St.Clipboard.get_default();
+                clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+
+                ui.close();
+
+                this._uploadToEndpoint(bytes, config);
+                break;
+            }
+            }
+        } catch (e) {
+            console.error(`[Big Shot] Action '${action}' failed: ${e.message}\n${e.stack}`);
+        }
+    }
+
+    /**
+     * Open a Save As dialog via xdg-desktop-portal FileChooser.
+     */
+    _openSaveDialog(tmpPath, pixbuf) {
+        try {
+            const time = GLib.DateTime.new_now_local();
+            const suggestedName = _('Screenshot from %s').format(
+                time.format('%Y-%m-%d %H-%M-%S')) + '.png';
+
+            // Use xdg-open with the temp file, or try portal
+            const bus = Gio.DBus.session;
+            bus.call(
+                'org.freedesktop.portal.Desktop',
+                '/org/freedesktop/portal/desktop',
+                'org.freedesktop.portal.FileChooser',
+                'SaveFile',
+                new GLib.Variant('(ssa{sv})', [
+                    '',
+                    _('Save Screenshot'),
+                    {
+                        'current_name': new GLib.Variant('s', suggestedName),
+                        'current_folder': new GLib.Variant('ay',
+                            new TextEncoder().encode(
+                                GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES) ||
+                                GLib.get_home_dir()
+                            )),
+                        'filters': new GLib.Variant('a(sa(us))', [
+                            ['PNG Images', [
+                                [0, '*.png'],
+                            ]],
+                        ]),
+                    },
+                ]),
+                new GLib.VariantType('(o)'),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                null,
+                (conn, asyncResult) => {
+                    try {
+                        const result = conn.call_finish(asyncResult);
+                        const [requestPath] = result.deepUnpack();
+
+                        // Listen for the Response signal
+                        const subId = bus.signal_subscribe(
+                            'org.freedesktop.portal.Desktop',
+                            'org.freedesktop.portal.Request',
+                            'Response',
+                            requestPath,
+                            null,
+                            Gio.DBusSignalFlags.NO_MATCH_RULE,
+                            (_c, _sender, _path, _iface, _signal, params) => {
+                                bus.signal_unsubscribe(subId);
+                                const [response, results] = params.deepUnpack();
+                                if (response === 0 && results.uris) {
+                                    const uris = results.uris.deepUnpack();
+                                    if (uris.length > 0) {
+                                        const destFile = Gio.File.new_for_uri(uris[0]);
+                                        const srcFile = Gio.File.new_for_path(tmpPath);
+                                        try {
+                                            srcFile.copy(destFile, Gio.FileCopyFlags.OVERWRITE, null, null);
+                                            console.log(`[Big Shot] Saved to: ${uris[0]}`);
+                                        } catch (err) {
+                                            console.error(`[Big Shot] Save failed: ${err.message}`);
+                                        }
+                                    }
+                                }
+                                // Clean up temp file
+                                try { Gio.File.new_for_path(tmpPath).delete(null); } catch (_e) { /* */ }
+                            }
+                        );
+                    } catch (e) {
+                        console.error(`[Big Shot] Portal SaveFile failed: ${e.message}`);
+                        // Fallback: just open file manager at the temp location
+                        try { Gio.File.new_for_path(tmpPath).delete(null); } catch (_e) { /* */ }
+                    }
+                }
+            );
+        } catch (e) {
+            console.error(`[Big Shot] Save dialog failed: ${e.message}`);
+            try { Gio.File.new_for_path(tmpPath).delete(null); } catch (_e) { /* */ }
+        }
+    }
+
+    /**
+     * Upload PNG bytes to Nextcloud via WebDAV.
+     * Config: { url, username, password, folder }
+     */
+    _uploadToNextcloud(bytes, config) {
+        const time = GLib.DateTime.new_now_local();
+        const fileName = `Screenshot_${time.format('%Y-%m-%d_%H-%M-%S')}.png`;
+        const folder = config.folder || '/Screenshots';
+        const uploadUrl = `${config.url.replace(/\/$/, '')}/remote.php/dav/files/${config.username}${folder}/${fileName}`;
+
+        const auth = GLib.base64_encode(`${config.username}:${config.password}`);
+
+        try {
+            const proc = Gio.Subprocess.new(
+                ['curl', '-s', '-o', '/dev/null', '-w', '%{http_code}',
+                    '-X', 'PUT',
+                    '-H', `Authorization: Basic ${auth}`,
+                    '-H', 'Content-Type: image/png',
+                    '--data-binary', '@-',
+                    uploadUrl],
+                Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE
+            );
+
+            const bytesData = bytes.get_data();
+            proc.communicate_async(GLib.Bytes.new(bytesData), null, (_p, asyncResult) => {
+                try {
+                    const [, stdout] = proc.communicate_finish(asyncResult);
+                    const httpCode = new TextDecoder().decode(stdout.get_data()).trim();
+                    if (httpCode === '201' || httpCode === '204') {
+                        const shareUrl = `${config.url.replace(/\/$/, '')}/f/${folder}/${fileName}`;
+                        this._showNotification(
+                            _('Uploaded to Nextcloud'),
+                            fileName);
+                        console.log(`[Big Shot] Nextcloud upload OK: ${httpCode}`);
+                    } else {
+                        this._showNotification(
+                            _('Nextcloud upload failed'),
+                            `HTTP ${httpCode}`);
+                        console.error(`[Big Shot] Nextcloud upload failed: HTTP ${httpCode}`);
+                    }
+                } catch (e) {
+                    console.error(`[Big Shot] Nextcloud upload error: ${e.message}`);
+                    this._showNotification(_('Nextcloud upload failed'), e.message);
+                }
+            });
+        } catch (e) {
+            console.error(`[Big Shot] Nextcloud upload launch failed: ${e.message}`);
+            this._showNotification(_('Nextcloud upload failed'), e.message);
+        }
+    }
+
+    /**
+     * Upload PNG bytes to a custom endpoint.
+     * Config: { url, method, headers, fileField, responseUrlField }
+     */
+    _uploadToEndpoint(bytes, config) {
+        const time = GLib.DateTime.new_now_local();
+        const fileName = `Screenshot_${time.format('%Y-%m-%d_%H-%M-%S')}.png`;
+
+        // Build curl command for multipart upload
+        const tmpPath = GLib.build_filenamev([
+            GLib.get_tmp_dir(), `bigshot-upload-${Date.now()}.png`]);
+        const tmpFile = Gio.File.new_for_path(tmpPath);
+        const outStream = tmpFile.create(Gio.FileCreateFlags.NONE, null);
+        outStream.write_bytes(bytes, null);
+        outStream.close(null);
+
+        const fileField = config.fileField || 'file';
+        const method = config.method || 'POST';
+        const args = [
+            'curl', '-s', '-X', method,
+            '-F', `${fileField}=@${tmpPath};type=image/png;filename=${fileName}`,
+        ];
+
+        // Add custom headers
+        if (config.headers) {
+            for (const [key, value] of Object.entries(config.headers)) {
+                args.push('-H', `${key}: ${value}`);
+            }
+        }
+
+        args.push(config.url);
+
+        try {
+            const proc = Gio.Subprocess.new(
+                args,
+                Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE
+            );
+
+            proc.communicate_async(null, null, (_p, asyncResult) => {
+                try {
+                    const [, stdout] = proc.communicate_finish(asyncResult);
+                    const responseText = new TextDecoder().decode(stdout.get_data()).trim();
+
+                    // Try to extract URL from response
+                    let shareUrl = null;
+                    const urlField = config.responseUrlField || 'url';
+                    try {
+                        const json = JSON.parse(responseText);
+                        shareUrl = this._extractJsonField(json, urlField);
+                    } catch (_e) {
+                        // Maybe it's just a plain URL
+                        if (responseText.startsWith('http'))
+                            shareUrl = responseText;
+                    }
+
+                    if (shareUrl) {
+                        // Copy link to clipboard
+                        const clipboard = St.Clipboard.get_default();
+                        clipboard.set_text(St.ClipboardType.CLIPBOARD, shareUrl);
+                        this._showNotification(
+                            _('Link copied to clipboard'),
+                            shareUrl);
+                        console.log(`[Big Shot] Share URL: ${shareUrl}`);
+                    } else {
+                        this._showNotification(
+                            _('Upload complete'),
+                            _('Could not extract share URL'));
+                        console.log(`[Big Shot] Upload done, response: ${responseText.substring(0, 200)}`);
+                    }
+                } catch (e) {
+                    console.error(`[Big Shot] Share upload error: ${e.message}`);
+                    this._showNotification(_('Upload failed'), e.message);
+                } finally {
+                    try { Gio.File.new_for_path(tmpPath).delete(null); } catch (_e) { /* */ }
+                }
+            });
+        } catch (e) {
+            console.error(`[Big Shot] Share upload launch failed: ${e.message}`);
+            this._showNotification(_('Upload failed'), e.message);
+            try { Gio.File.new_for_path(tmpPath).delete(null); } catch (_e) { /* */ }
+        }
+    }
+
+    /**
+     * Extract a value from a JSON object by dot-separated path.
+     */
+    _extractJsonField(obj, path) {
+        const parts = path.split('.');
+        let current = obj;
+        for (const part of parts) {
+            if (current == null) return null;
+            current = current[part];
+        }
+        return typeof current === 'string' ? current : null;
+    }
+
+    /**
+     * Show a desktop notification via GNOME Shell.
+     */
+    _showNotification(title, body) {
+        try {
+            const source = new MessageTray.Source({
+                title: 'Big Shot',
+                iconName: 'camera-photo-symbolic',
+            });
+            Main.messageTray.add(source);
+            const notification = new MessageTray.Notification({
+                source,
+                title,
+                body,
+            });
+            source.addNotification(notification);
+        } catch (e) {
+            // Fallback: just log
+            console.log(`[Big Shot] Notification: ${title} — ${body}`);
+        }
+    }
+
     _detectPipelines() {
         // Already detected — skip
         if (this._availableConfigs !== null)
@@ -663,6 +1136,11 @@ export default class BigShotExtension extends Extension {
                 const isDrawTool = toolId !== null;
                 overlay.setReactive(isDrawTool);
             }
+        });
+
+        // Wire action buttons (copy, save-as, cloud, share)
+        this._toolbar.onAction((action) => {
+            this._handleAction(action);
         });
 
         // Audio — Desktop + Mic toggle buttons
