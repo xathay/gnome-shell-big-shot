@@ -150,10 +150,15 @@ export class PartToolbar extends PartUI {
         this._sizeButton.connect('scroll-event', (_actor, event) => {
             const dir = event.get_scroll_direction();
             let sz = this.brushSize;
-            if (dir === Clutter.ScrollDirection.UP)
+            if (dir === Clutter.ScrollDirection.UP) {
                 sz = Math.min(sz + 1, 100);
-            else if (dir === Clutter.ScrollDirection.DOWN)
+            } else if (dir === Clutter.ScrollDirection.DOWN) {
                 sz = Math.max(sz - 1, 1);
+            } else if (dir === Clutter.ScrollDirection.SMOOTH) {
+                const [, dy] = event.get_scroll_delta();
+                if (dy < 0) sz = Math.min(sz + 1, 100);
+                else if (dy > 0) sz = Math.max(sz - 1, 1);
+            }
             this._setBrushSize(sz);
             return Clutter.EVENT_STOP;
         });
@@ -205,10 +210,15 @@ export class PartToolbar extends PartUI {
         this._intensityButton.connect('scroll-event', (_actor, event) => {
             const dir = event.get_scroll_direction();
             let lvl = this._intensityLevel;
-            if (dir === Clutter.ScrollDirection.UP)
+            if (dir === Clutter.ScrollDirection.UP) {
                 lvl = Math.min(lvl + 1, 5);
-            else if (dir === Clutter.ScrollDirection.DOWN)
+            } else if (dir === Clutter.ScrollDirection.DOWN) {
                 lvl = Math.max(lvl - 1, 1);
+            } else if (dir === Clutter.ScrollDirection.SMOOTH) {
+                const [, dy] = event.get_scroll_delta();
+                if (dy < 0) lvl = Math.min(lvl + 1, 5);
+                else if (dy > 0) lvl = Math.max(lvl - 1, 1);
+            }
             this._intensityLevel = lvl;
             this._intensityLabel.text = String(lvl);
             return Clutter.EVENT_STOP;

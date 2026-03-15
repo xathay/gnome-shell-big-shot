@@ -157,7 +157,7 @@ export class DrawingOverlay {
         const intensity = toolbar?.intensity || 3;
 
         let fillColor = null;
-        if (mode === DrawingMode.NUMBER) {
+        if (mode === DrawingMode.NUMBER || mode === DrawingMode.NUMBER_ARROW || mode === DrawingMode.NUMBER_POINTER) {
             fillColor = this._hexToRGBA(colorHex);
         } else if (fillHex) {
             fillColor = this._hexToRGBA(fillHex);
