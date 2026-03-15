@@ -758,18 +758,19 @@ export default class BigShotExtension extends Extension {
                     GLib.get_user_config_dir(), 'big-shot', 'cloud.json']);
                 const configFile = Gio.File.new_for_path(configPath);
 
-                if (!configFile.query_exists(null)) {
-                    console.log(`[Big Shot] Cloud config not found: ${configPath}`);
-                    this._toolbar.showInlineMessage(
-                        _('Configure: %s').format(configPath));
-                    return;
+                let config = null;
+                if (configFile.query_exists(null)) {
+                    try {
+                        const [, configData] = configFile.load_contents(null);
+                        config = JSON.parse(new TextDecoder().decode(configData));
+                    } catch (_e) {
+                        config = null;
+                    }
                 }
 
-                const [, configData] = configFile.load_contents(null);
-                const config = JSON.parse(new TextDecoder().decode(configData));
-                if (!config.url || !config.username || !config.password) {
-                    this._toolbar.showInlineMessage(
-                        _('Cloud config incomplete: url, username, password'));
+                if (!config?.url || !config?.username || !config?.password) {
+                    // Show config dialog
+                    this._showCloudConfigDialog(bytes, config || {});
                     return;
                 }
 
@@ -787,18 +788,18 @@ export default class BigShotExtension extends Extension {
                     GLib.get_user_config_dir(), 'big-shot', 'share.json']);
                 const configFile = Gio.File.new_for_path(configPath);
 
-                if (!configFile.query_exists(null)) {
-                    console.log(`[Big Shot] Share config not found: ${configPath}`);
-                    this._toolbar.showInlineMessage(
-                        _('Configure: %s').format(configPath));
-                    return;
+                let config = null;
+                if (configFile.query_exists(null)) {
+                    try {
+                        const [, configData] = configFile.load_contents(null);
+                        config = JSON.parse(new TextDecoder().decode(configData));
+                    } catch (_e) {
+                        config = null;
+                    }
                 }
 
-                const [, configData] = configFile.load_contents(null);
-                const config = JSON.parse(new TextDecoder().decode(configData));
-                if (!config.url) {
-                    this._toolbar.showInlineMessage(
-                        _('Share config incomplete: needs url'));
+                if (!config?.url) {
+                    this._showShareConfigDialog(bytes, config || {});
                     return;
                 }
 
@@ -1058,31 +1059,328 @@ export default class BigShotExtension extends Extension {
         console.log(`[Big Shot] _setNativePanelCollapsed(${collapsed}), panel=${!!panel}, closeBtn=${!!closeBtn}`);
         if (!panel) return;
 
-        const duration = 200;
-        const mode = Clutter.AnimationMode.EASE_OUT_QUAD;
-
         if (collapsed) {
-            panel.ease({
-                opacity: 0,
-                duration,
-                mode,
-                onComplete: () => { panel.visible = false; },
-            });
-            if (closeBtn) {
-                closeBtn.ease({
-                    opacity: 0,
-                    duration,
-                    mode,
-                    onComplete: () => { closeBtn.visible = false; },
-                });
-            }
+            panel.add_style_class_name('big-shot-panel-hidden');
+            if (closeBtn)
+                closeBtn.add_style_class_name('big-shot-panel-hidden');
         } else {
-            panel.visible = true;
-            panel.ease({ opacity: 255, duration, mode });
-            if (closeBtn) {
-                closeBtn.visible = true;
-                closeBtn.ease({ opacity: 255, duration, mode });
+            panel.remove_style_class_name('big-shot-panel-hidden');
+            if (closeBtn)
+                closeBtn.remove_style_class_name('big-shot-panel-hidden');
+        }
+    }
+
+    /**
+     * Show a cloud config dialog inside the screenshot UI.
+     */
+    _showCloudConfigDialog(bytes, existingConfig) {
+        this._dismissCloudConfigDialog();
+
+        const ui = this._screenshotUI;
+
+        // Semi-transparent backdrop
+        const backdrop = new St.Bin({
+            style: 'background: rgba(0,0,0,0.5);',
+            reactive: true,
+            x_expand: true,
+            y_expand: true,
+        });
+        backdrop.connect('button-press-event', () => {
+            this._dismissCloudConfigDialog();
+            return Clutter.EVENT_STOP;
+        });
+
+        // Dialog panel
+        const dialog = new St.BoxLayout({
+            vertical: true,
+            style: `background: rgba(36,36,36,0.95); border-radius: 16px;
+                    padding: 24px; min-width: 380px; spacing: 12px;`,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const title = new St.Label({
+            text: _('Cloud Settings (Nextcloud)'),
+            style: 'font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 8px;',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        dialog.add_child(title);
+
+        const makeField = (label, value, isPassword) => {
+            const row = new St.BoxLayout({ vertical: true, style: 'spacing: 4px;' });
+            row.add_child(new St.Label({
+                text: label,
+                style: 'font-size: 12px; color: rgba(255,255,255,0.7);',
+            }));
+            const entry = new St.Entry({
+                text: value || '',
+                style: `background: rgba(255,255,255,0.1); border-radius: 8px;
+                        padding: 8px 12px; color: #fff; font-size: 13px;
+                        border: 1px solid rgba(255,255,255,0.15);`,
+                can_focus: true,
+                hint_text: label,
+            });
+            if (isPassword) {
+                const clutterText = entry.get_clutter_text();
+                clutterText.set_password_char('\u25CF');
             }
+            row.add_child(entry);
+            dialog.add_child(row);
+            return entry;
+        };
+
+        const urlEntry = makeField(_('URL'), existingConfig.url, false);
+        const userEntry = makeField(_('Username'), existingConfig.username, false);
+        const passEntry = makeField(_('Password'), existingConfig.password, true);
+        const folderEntry = makeField(_('Folder (optional)'),
+            existingConfig.folder || '/Screenshots', false);
+
+        // Buttons row
+        const btnRow = new St.BoxLayout({
+            style: 'spacing: 12px; margin-top: 8px;',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const cancelBtn = new St.Button({
+            label: _('Cancel'),
+            style: `background: rgba(255,255,255,0.1); border-radius: 8px;
+                    padding: 8px 20px; color: #fff; font-size: 13px;`,
+        });
+        cancelBtn.connect('clicked', () => this._dismissCloudConfigDialog());
+        btnRow.add_child(cancelBtn);
+
+        const saveBtn = new St.Button({
+            label: _('Save & Upload'),
+            style: `background: #3584e4; border-radius: 8px;
+                    padding: 8px 20px; color: #fff; font-size: 13px; font-weight: bold;`,
+        });
+        saveBtn.connect('clicked', () => {
+            const url = urlEntry.get_text().trim();
+            const username = userEntry.get_text().trim();
+            const password = passEntry.get_text().trim();
+            const folder = folderEntry.get_text().trim() || '/Screenshots';
+
+            if (!url || !username || !password) {
+                this._toolbar.showInlineMessage(_('Fill all required fields'));
+                return;
+            }
+
+            // Save config
+            const config = { url, username, password, folder };
+            const configDir = GLib.build_filenamev([
+                GLib.get_user_config_dir(), 'big-shot']);
+            GLib.mkdir_with_parents(configDir, 0o755);
+            const configPath = GLib.build_filenamev([configDir, 'cloud.json']);
+            const file = Gio.File.new_for_path(configPath);
+            const json = JSON.stringify(config, null, 2);
+            file.replace_contents(
+                new TextEncoder().encode(json),
+                null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+            console.log(`[Big Shot] Cloud config saved to ${configPath}`);
+
+            this._dismissCloudConfigDialog();
+
+            // Copy to clipboard and upload
+            const clipboard = St.Clipboard.get_default();
+            clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+            ui.close();
+            this._uploadToNextcloud(bytes, config);
+        });
+        btnRow.add_child(saveBtn);
+
+        // Reset button
+        const resetBtn = new St.Button({
+            label: _('Reset'),
+            style: `background: rgba(224,27,36,0.8); border-radius: 8px;
+                    padding: 8px 16px; color: #fff; font-size: 12px;`,
+        });
+        resetBtn.connect('clicked', () => {
+            const configPath = GLib.build_filenamev([
+                GLib.get_user_config_dir(), 'big-shot', 'cloud.json']);
+            const f = Gio.File.new_for_path(configPath);
+            if (f.query_exists(null)) {
+                f.delete(null);
+                console.log(`[Big Shot] Cloud config deleted: ${configPath}`);
+            }
+            urlEntry.set_text('');
+            userEntry.set_text('');
+            passEntry.set_text('');
+            folderEntry.set_text('/Screenshots');
+            this._toolbar.showInlineMessage(_('Cloud config removed'));
+        });
+        btnRow.add_child(resetBtn);
+
+        dialog.add_child(btnRow);
+        backdrop.set_child(dialog);
+
+        this._cloudConfigDialog = backdrop;
+        ui.add_child(backdrop);
+
+        // Focus the URL field
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            urlEntry.grab_key_focus();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _dismissCloudConfigDialog() {
+        if (this._cloudConfigDialog) {
+            this._cloudConfigDialog.destroy();
+            this._cloudConfigDialog = null;
+        }
+    }
+
+    /**
+     * Show a share endpoint config dialog inside the screenshot UI.
+     */
+    _showShareConfigDialog(bytes, existingConfig) {
+        this._dismissShareConfigDialog();
+
+        const ui = this._screenshotUI;
+
+        const backdrop = new St.Bin({
+            style: 'background: rgba(0,0,0,0.5);',
+            reactive: true,
+            x_expand: true,
+            y_expand: true,
+        });
+        backdrop.connect('button-press-event', () => {
+            this._dismissShareConfigDialog();
+            return Clutter.EVENT_STOP;
+        });
+
+        const dialog = new St.BoxLayout({
+            vertical: true,
+            style: `background: rgba(36,36,36,0.95); border-radius: 16px;
+                    padding: 24px; min-width: 380px; spacing: 12px;`,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const title = new St.Label({
+            text: _('Share Settings'),
+            style: 'font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 8px;',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        dialog.add_child(title);
+
+        const makeField = (label, value) => {
+            const row = new St.BoxLayout({ vertical: true, style: 'spacing: 4px;' });
+            row.add_child(new St.Label({
+                text: label,
+                style: 'font-size: 12px; color: rgba(255,255,255,0.7);',
+            }));
+            const entry = new St.Entry({
+                text: value || '',
+                style: `background: rgba(255,255,255,0.1); border-radius: 8px;
+                        padding: 8px 12px; color: #fff; font-size: 13px;
+                        border: 1px solid rgba(255,255,255,0.15);`,
+                can_focus: true,
+                hint_text: label,
+            });
+            row.add_child(entry);
+            dialog.add_child(row);
+            return entry;
+        };
+
+        const urlEntry = makeField(_('Upload URL'), existingConfig.url);
+        const fileFieldEntry = makeField(_('File field name'),
+            existingConfig.fileField || 'file');
+        const responseUrlEntry = makeField(_('Response URL field (JSON path)'),
+            existingConfig.responseUrlField || 'url');
+
+        const btnRow = new St.BoxLayout({
+            style: 'spacing: 12px; margin-top: 8px;',
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+
+        const cancelBtn = new St.Button({
+            label: _('Cancel'),
+            style: `background: rgba(255,255,255,0.1); border-radius: 8px;
+                    padding: 8px 20px; color: #fff; font-size: 13px;`,
+        });
+        cancelBtn.connect('clicked', () => this._dismissShareConfigDialog());
+        btnRow.add_child(cancelBtn);
+
+        const saveBtn = new St.Button({
+            label: _('Save & Upload'),
+            style: `background: #3584e4; border-radius: 8px;
+                    padding: 8px 20px; color: #fff; font-size: 13px; font-weight: bold;`,
+        });
+        saveBtn.connect('clicked', () => {
+            const url = urlEntry.get_text().trim();
+            const fileField = fileFieldEntry.get_text().trim() || 'file';
+            const responseUrlField = responseUrlEntry.get_text().trim() || 'url';
+
+            if (!url) {
+                this._toolbar.showInlineMessage(_('URL is required'));
+                return;
+            }
+
+            const config = {
+                url,
+                method: 'POST',
+                fileField,
+                responseUrlField,
+            };
+            const configDir = GLib.build_filenamev([
+                GLib.get_user_config_dir(), 'big-shot']);
+            GLib.mkdir_with_parents(configDir, 0o755);
+            const configPath = GLib.build_filenamev([configDir, 'share.json']);
+            const file = Gio.File.new_for_path(configPath);
+            const json = JSON.stringify(config, null, 2);
+            file.replace_contents(
+                new TextEncoder().encode(json),
+                null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+            console.log(`[Big Shot] Share config saved to ${configPath}`);
+
+            this._dismissShareConfigDialog();
+
+            const clipboard = St.Clipboard.get_default();
+            clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
+            ui.close();
+            this._uploadToEndpoint(bytes, config);
+        });
+        btnRow.add_child(saveBtn);
+
+        const resetBtn = new St.Button({
+            label: _('Reset'),
+            style: `background: rgba(224,27,36,0.8); border-radius: 8px;
+                    padding: 8px 16px; color: #fff; font-size: 12px;`,
+        });
+        resetBtn.connect('clicked', () => {
+            const configPath = GLib.build_filenamev([
+                GLib.get_user_config_dir(), 'big-shot', 'share.json']);
+            const f = Gio.File.new_for_path(configPath);
+            if (f.query_exists(null)) {
+                f.delete(null);
+                console.log(`[Big Shot] Share config deleted: ${configPath}`);
+            }
+            urlEntry.set_text('');
+            fileFieldEntry.set_text('file');
+            responseUrlEntry.set_text('url');
+            this._toolbar.showInlineMessage(_('Share config removed'));
+        });
+        btnRow.add_child(resetBtn);
+
+        dialog.add_child(btnRow);
+        backdrop.set_child(dialog);
+
+        this._shareConfigDialog = backdrop;
+        ui.add_child(backdrop);
+
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            urlEntry.grab_key_focus();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _dismissShareConfigDialog() {
+        if (this._shareConfigDialog) {
+            this._shareConfigDialog.destroy();
+            this._shareConfigDialog = null;
         }
     }
 

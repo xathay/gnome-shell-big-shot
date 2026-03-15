@@ -117,3 +117,12 @@
     background-color: white;
     border: 2px solid rgba(0, 0, 0, 0.5);
 }
+
+/* ===== Hidden native panel when editing ===== */
+.big-shot-panel-hidden {
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    /* transition: opacity 200ms ease-out; */
+}
