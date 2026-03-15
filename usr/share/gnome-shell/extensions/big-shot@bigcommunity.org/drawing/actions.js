@@ -520,12 +520,12 @@ export class CensorAction extends RectAction {
 
     /**
      * Compute block size from intensity level (1-5).
-     * Higher intensity → smaller blocks → stronger pixelation.
+     * Higher intensity → larger blocks → stronger pixelation.
      */
     _blockSizeForIntensity(scaleFactor) {
         const level = this.options?.intensity || 3;
-        // level 1=16, 2=12, 3=8, 4=5, 5=3
-        const sizes = [16, 12, 8, 5, 3];
+        // level 1=3 (weak), 2=5, 3=8, 4=12, 5=16 (strong)
+        const sizes = [3, 5, 8, 12, 16];
         const base = sizes[Math.max(0, Math.min(level - 1, 4))];
         return Math.max(2, Math.round(base * scaleFactor));
     }

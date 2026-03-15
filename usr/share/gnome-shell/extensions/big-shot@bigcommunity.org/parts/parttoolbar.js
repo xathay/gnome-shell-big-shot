@@ -77,11 +77,65 @@ export class PartToolbar extends PartUI {
         const panel = this._ui._panel;
         if (!panel) return;
 
-        // === Single edit row (inserted INTO native panel when active) ===
+        // === Floating edit toolbar (added to _ui, draggable) ===
         this._editContainer = new St.BoxLayout({
-            style_class: 'big-shot-edit-row',
+            style_class: 'big-shot-edit-row big-shot-edit-floating',
             reactive: true,
-            x_align: Clutter.ActorAlign.CENTER,
+        });
+
+        // Drag state
+        this._dragging = false;
+        this._dragStartX = 0;
+        this._dragStartY = 0;
+        this._dragOffsetX = 0;
+        this._dragOffsetY = 0;
+
+        this._editContainer.connect('button-press-event', (_actor, event) => {
+            if (event.get_button() !== 1) return Clutter.EVENT_PROPAGATE;
+            const [mx, my] = event.get_coords();
+            const [ax, ay] = this._editContainer.get_transformed_position();
+            this._dragging = true;
+            this._dragStartX = mx;
+            this._dragStartY = my;
+            this._dragOffsetX = ax - mx;
+            this._dragOffsetY = ay - my;
+            return Clutter.EVENT_PROPAGATE; // let buttons handle their own clicks
+        });
+
+        this._editContainer.connect('motion-event', (_actor, event) => {
+            if (!this._dragging) return Clutter.EVENT_PROPAGATE;
+            const [mx, my] = event.get_coords();
+            const dx = mx - this._dragStartX;
+            const dy = my - this._dragStartY;
+            if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return Clutter.EVENT_PROPAGATE;
+            this._editContainer.set_position(
+                mx + this._dragOffsetX,
+                my + this._dragOffsetY,
+            );
+            return Clutter.EVENT_STOP;
+        });
+
+        this._editContainer.connect('button-release-event', () => {
+            this._dragging = false;
+            return Clutter.EVENT_PROPAGATE;
+        });
+
+        // Semi-transparent by default, opaque on hover
+        this._editContainer.opacity = 180;
+        this._editContainer.connect('enter-event', () => {
+            this._editContainer.ease({
+                opacity: 255,
+                duration: 150,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
+        });
+        this._editContainer.connect('leave-event', () => {
+            if (this._dragging) return;
+            this._editContainer.ease({
+                opacity: 180,
+                duration: 300,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
         });
 
         // Drawing tool icons
@@ -349,15 +403,27 @@ export class PartToolbar extends PartUI {
         this._connectSignal(this._ui, 'notify::visible', () => this._onUIVisibilityChanged());
     }
 
-    /** Insert edit tools at position 0 of the native panel (above mode buttons). */
+    /** Add edit toolbar as floating actor above the native panel. */
     _attachEditToPanel() {
+        if (this._editContainer.get_parent()) return;
+        this._ui.add_child(this._editContainer);
+
+        // Position centered, above the native panel
         const panel = this._ui._panel;
-        if (!panel || this._editContainer.get_parent()) return;
-        panel.insert_child_at_index(this._editContainer, 0);
-        // Slide-in animation
+        if (panel) {
+            const [px, py] = panel.get_transformed_position();
+            const pw = panel.width;
+            const cw = this._editContainer.get_preferred_width(-1)[1] || 600;
+            this._editContainer.set_position(
+                px + (pw - cw) / 2,
+                py - this._editContainer.get_preferred_height(-1)[1] - 12,
+            );
+        }
+
+        // Fade-in
         this._editContainer.opacity = 0;
         this._editContainer.ease({
-            opacity: 255,
+            opacity: 180,
             duration: 200,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });

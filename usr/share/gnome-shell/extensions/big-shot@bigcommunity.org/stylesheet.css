@@ -24,6 +24,15 @@
     spacing: 4px;
 }
 
+/* Floating draggable toolbar */
+.big-shot-edit-floating {
+    background-color: rgba(30, 30, 30, 0.85);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
 .big-shot-edit-tool-btn {
     border-radius: 8px;
     padding: 3px;
