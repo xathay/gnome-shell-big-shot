@@ -248,7 +248,6 @@ export default class BigShotExtension extends Extension {
         // Intercept _saveScreenshot to composite annotations onto the image
         this._patchSaveScreenshot();
 
-        console.log('[Big Shot] Extension enabled');
     }
 
     disable() {
@@ -285,7 +284,6 @@ export default class BigShotExtension extends Extension {
         this._screenshotUI = null;
         this._availableConfigs = null;
 
-        console.log('[Big Shot] Extension disabled');
     }
 
     _forceEnableScreencast() {
@@ -317,7 +315,6 @@ export default class BigShotExtension extends Extension {
             }
         }
 
-        console.log('[Big Shot] Screencast button force-enabled');
     }
 
     _revertForceScreencast() {
@@ -350,14 +347,11 @@ export default class BigShotExtension extends Extension {
         const ext = this;
 
         ui._saveScreenshot = async function () {
-            console.log('[Big Shot] _saveScreenshot called');
             const overlay = ext._annotation?._overlay;
             const actions = overlay?._actions;
-            console.log(`[Big Shot] overlay=${!!overlay}, actions=${actions?.length ?? 'null'}`);
 
             // No annotations — use original save
             if (!actions || actions.length === 0) {
-                console.log('[Big Shot] No annotations, using original save');
                 return ext._origSaveScreenshot();
             }
 
@@ -448,9 +442,7 @@ export default class BigShotExtension extends Extension {
                             );
                             if (result) {
                                 workPixbuf = result;
-                                console.log(`[Big Shot] drawReal applied: ${action.constructor.name}`);
                             } else {
-                                console.log(`[Big Shot] drawReal returned null: ${action.constructor.name}`);
                             }
                         } catch (err) {
                             console.error(`[Big Shot] drawReal failed for ${action.constructor.name}: ${err.message}\n${err.stack}`);
@@ -508,7 +500,6 @@ export default class BigShotExtension extends Extension {
             }
         };
 
-        console.log('[Big Shot] _saveScreenshot intercepted for annotation compositing');
     }
 
     /**
@@ -716,11 +707,9 @@ export default class BigShotExtension extends Extension {
      */
     async _handleAction(action) {
         const ui = this._screenshotUI;
-        console.log(`[Big Shot] _handleAction('${action}') called`);
 
         try {
             const result = await this._captureAnnotatedBytes();
-            console.log(`[Big Shot] _captureAnnotatedBytes result: ${!!result}`);
             if (!result) {
                 console.error('[Big Shot] Failed to capture screenshot');
                 return;
@@ -734,7 +723,6 @@ export default class BigShotExtension extends Extension {
                 clipboard.set_content(St.ClipboardType.CLIPBOARD, 'image/png', bytes);
                 global.display.get_sound_player().play_from_theme(
                     'screen-capture', _('Screenshot copied'), null);
-                console.log('[Big Shot] Screenshot copied to clipboard');
                 ui.close();
                 break;
             }
@@ -884,7 +872,6 @@ export default class BigShotExtension extends Extension {
                                         const srcFile = Gio.File.new_for_path(tmpPath);
                                         try {
                                             srcFile.copy(destFile, Gio.FileCopyFlags.OVERWRITE, null, null);
-                                            console.log(`[Big Shot] Saved to: ${uris[0]}`);
                                         } catch (err) {
                                             console.error(`[Big Shot] Save failed: ${err.message}`);
                                         }
@@ -947,7 +934,6 @@ export default class BigShotExtension extends Extension {
                         this._showNotification(
                             _('Uploaded to Nextcloud'),
                             fileName);
-                        console.log(`[Big Shot] Nextcloud upload OK: ${httpCode}`);
                     } else {
                         this._showNotification(
                             _('Nextcloud upload failed'),
@@ -1027,12 +1013,10 @@ export default class BigShotExtension extends Extension {
                         this._showNotification(
                             _('Link copied to clipboard'),
                             shareUrl);
-                        console.log(`[Big Shot] Share URL: ${shareUrl}`);
                     } else {
                         this._showNotification(
                             _('Upload complete'),
                             _('Could not extract share URL'));
-                        console.log(`[Big Shot] Upload done, response: ${responseText.substring(0, 200)}`);
                     }
                 } catch (e) {
                     console.error(`[Big Shot] Share upload error: ${e.message}`);
@@ -1088,7 +1072,6 @@ export default class BigShotExtension extends Extension {
      */
     _showCloudConfigDialog(bytes, existingConfig) {
         this._dismissCloudConfigDialog();
-        console.log('[Big Shot] _showCloudConfigDialog called');
 
         const ui = this._screenshotUI;
 
@@ -1217,7 +1200,6 @@ export default class BigShotExtension extends Extension {
                 new TextEncoder().encode(json),
                 null, false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-            console.log(`[Big Shot] Cloud config saved to ${configPath}`);
 
             this._dismissCloudConfigDialog();
 
@@ -1241,7 +1223,6 @@ export default class BigShotExtension extends Extension {
             const f = Gio.File.new_for_path(configPath);
             if (f.query_exists(null)) {
                 f.delete(null);
-                console.log(`[Big Shot] Cloud config deleted: ${configPath}`);
             }
             urlEntry.set_text('');
             userEntry.set_text('');
@@ -1256,7 +1237,6 @@ export default class BigShotExtension extends Extension {
 
         this._cloudConfigDialog = backdrop;
         global.stage.add_child(backdrop);
-        console.log(`[Big Shot] Cloud dialog added to UI, backdrop visible=${backdrop.visible}, size=${backdrop.width}x${backdrop.height}`);
 
         // Focus the URL field
         GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
@@ -1401,7 +1381,6 @@ export default class BigShotExtension extends Extension {
                 new TextEncoder().encode(json),
                 null, false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-            console.log(`[Big Shot] Share config saved to ${configPath}`);
 
             this._dismissShareConfigDialog();
 
@@ -1423,7 +1402,6 @@ export default class BigShotExtension extends Extension {
             const f = Gio.File.new_for_path(configPath);
             if (f.query_exists(null)) {
                 f.delete(null);
-                console.log(`[Big Shot] Share config deleted: ${configPath}`);
             }
             urlEntry.set_text('');
             fileFieldEntry.set_text('file');
@@ -1468,7 +1446,6 @@ export default class BigShotExtension extends Extension {
             });
             source.addNotification(notification);
         } catch (e) {
-            console.log(`[Big Shot] Notification fallback: ${title} — ${body}`);
             // Fallback: show as OSD via Main.osdWindowManager
             try {
                 const monitor = global.display.get_current_monitor();
@@ -1486,7 +1463,6 @@ export default class BigShotExtension extends Extension {
 
         // 1. Detect GPU vendor(s) via lspci (same as big-video-converter)
         this._gpuVendors = detectGpuVendors();
-        console.log(`[Big Shot] Detected GPU vendor(s): ${this._gpuVendors.join(', ')}`);
 
         const vendorSet = new Set(this._gpuVendors);
 
@@ -1517,11 +1493,6 @@ export default class BigShotExtension extends Extension {
 
         if (this._availableConfigs.length === 0) {
             console.warn('[Big Shot] No compatible GStreamer pipeline found!');
-        } else {
-            console.log(`[Big Shot] Pipeline priority (${this._availableConfigs.length} config(s)):`);
-            this._availableConfigs.forEach((c, i) => {
-                console.log(`  [${i}] ${c.id} — ${c.label}`);
-            });
         }
     }
 
@@ -1582,10 +1553,8 @@ export default class BigShotExtension extends Extension {
         const screenshotUI = this._screenshotUI;
         const screencastProxy = screenshotUI._screencastProxy;
         if (!screencastProxy) {
-            console.log('[Big Shot] WARNING: _screencastProxy not found on screenshotUI');
             return;
         }
-        console.log('[Big Shot] Patching screencast proxy methods');
 
         // Save original methods
         this._origScreencast = screencastProxy.ScreencastAsync?.bind(screencastProxy);
@@ -1664,7 +1633,6 @@ export default class BigShotExtension extends Extension {
         this._detectPipelines();
 
         if (this._availableConfigs.length === 0) {
-            console.log('[Big Shot] No custom pipelines, using GNOME default');
             return originalMethod(filePath, options);
         }
 
@@ -1699,12 +1667,9 @@ export default class BigShotExtension extends Extension {
                 pipeline: new GLib.Variant('s', pipeline),
             };
 
-            console.log(`[Big Shot] Trying pipeline [${i}]: ${config.id} (${config.label})`);
-            console.log(`[Big Shot] Pipeline string: ${pipeline}`);
 
             try {
                 const result = await originalMethod(filePath, pipelineOptions);
-                console.log(`[Big Shot] Pipeline ${config.id} succeeded`);
                 this._indicator?.onPipelineReady();
 
                 // Fix .undefined extension: GNOME creates files with .undefined
@@ -1715,7 +1680,6 @@ export default class BigShotExtension extends Extension {
                     const correctExt = `.${config.ext}`;
                     if (!actualPath.endsWith(correctExt)) {
                         const newPath = actualPath.replace(/\.[^.]+$/, correctExt);
-                        console.log(`[Big Shot] Scheduling rename: ${actualPath} → ${newPath}`);
                         this._scheduleFileRename(actualPath, config.ext);
                         return [result[0], newPath];
                     }
@@ -1801,14 +1765,12 @@ export default class BigShotExtension extends Extension {
                 /queue/,
                 `queue ! videoscale ! video/x-raw,width=${targetW},height=${targetH}`
             );
-            console.log(`[Big Shot] Downsize ${Math.round(downsize * 100)}%: ${geo.width}x${geo.height} → ${targetW}x${targetH}`);
         }
 
         const audioInput = this._audio?.makeAudioInput();
         const ext = config.ext;
         const muxer = MUXERS[ext];
 
-        console.log(`[Big Shot] _makePipeline: audioInput=${audioInput ? 'YES' : 'NO'}, ext=${ext}`);
 
         if (audioInput) {
             // GStreamer multi-branch pipeline for audio+video:
