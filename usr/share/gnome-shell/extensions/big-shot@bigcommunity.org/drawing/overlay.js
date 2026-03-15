@@ -678,21 +678,7 @@ export class DrawingOverlay {
 
             if (tempAction) {
                 cr.save();
-                if (mode === DrawingMode.HIGHLIGHTER && tempAction.stroke?.length >= 2) {
-                    // Highlighter preview: use OVER with semi-transparent color
-                    // (MULTIPLY on cleared overlay can be invisible depending on compositor)
-                    const coords = tempAction.stroke.map(([sx, sy]) => toWidget(sx, sy));
-                    const [r, g, b] = options.primaryColor;
-                    cr.setSourceRGBA(r, g, b, 0.45);
-                    cr.setLineWidth(options.size * scale * 2);
-                    cr.setLineCap(0); // BUTT
-                    cr.moveTo(...coords[0]);
-                    for (let i = 1; i < coords.length; i++)
-                        cr.lineTo(...coords[i]);
-                    cr.stroke();
-                } else {
-                    tempAction.draw(cr, toWidget, scale);
-                }
+                tempAction.draw(cr, toWidget, scale);
                 cr.restore();
             }
         }

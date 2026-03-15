@@ -440,31 +440,13 @@ export class HighlighterAction extends StrokeAction {
         if (this.stroke.length < 2) return;
 
         const coords = this.stroke.map(([x, y]) => toWidget(x, y));
-
-        cr.save();
-        // Cairo.Operator.MULTIPLY = 14 (for highlight blending effect)
-        cr.setOperator(14);
-        cr.setSourceRGBA(...this.options.primaryColor);
-        cr.setLineWidth(this.options.size * scale * 2);
-        cr.setLineCap(0); // BUTT
-
-        cr.moveTo(...coords[0]);
-        for (let i = 1; i < coords.length; i++) {
-            cr.lineTo(...coords[i]);
-        }
-        cr.stroke();
-        cr.restore();
-    }
-
-    /** Semi-transparent preview for use on transparent overlays. */
-    drawPreview(cr, toWidget, scale) {
-        if (this.stroke.length < 2) return;
-
-        const coords = this.stroke.map(([x, y]) => toWidget(x, y));
         const [r, g, b] = this.options.primaryColor;
 
         cr.save();
-        cr.setSourceRGBA(r, g, b, 0.35);
+        // Semi-transparent OVER — works on both transparent overlay
+        // and image surface (at save time). Gives a consistent
+        // translucent highlight effect in all contexts.
+        cr.setSourceRGBA(r, g, b, 0.45);
         cr.setLineWidth(this.options.size * scale * 2);
         cr.setLineCap(0); // BUTT
 
@@ -475,6 +457,7 @@ export class HighlighterAction extends StrokeAction {
         cr.stroke();
         cr.restore();
     }
+
 }
 
 // =============================================================================
