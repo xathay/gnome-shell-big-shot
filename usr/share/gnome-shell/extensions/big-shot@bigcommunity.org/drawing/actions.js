@@ -1039,12 +1039,12 @@ export class NumberArrowAction extends DrawingAction {
         // Start from badge edge, end near tip (leave room for arrowhead)
         const sx = badgeX + nx * r;
         const sy = badgeY + ny * r;
-        const headLen = Math.min(12 * scale, len * 0.3);
+        const headLen = Math.max(14 * scale, r * 0.7);
         const ex = tipX - nx * headLen * 0.3;
         const ey = tipY - ny * headLen * 0.3;
 
         cr.setSourceRGBA(...this.options.primaryColor);
-        cr.setLineWidth(Math.max(1.5, this.options.size * 0.5) * scale);
+        cr.setLineWidth(Math.max(2, this.options.size * 0.4) * scale);
         cr.setLineCap(1); // ROUND
         cr.moveTo(sx, sy);
         cr.lineTo(ex, ey);
@@ -1053,7 +1053,7 @@ export class NumberArrowAction extends DrawingAction {
         // Arrowhead
         const perpX = -ny;
         const perpY = nx;
-        const hw = headLen * 0.4;
+        const hw = headLen * 0.5;
         cr.moveTo(tipX, tipY);
         cr.lineTo(tipX - nx * headLen + perpX * hw, tipY - ny * headLen + perpY * hw);
         cr.lineTo(tipX - nx * headLen - perpX * hw, tipY - ny * headLen - perpY * hw);
