@@ -1055,6 +1055,7 @@ export default class BigShotExtension extends Extension {
 
         const panel = ui._panel;
         const closeBtn = ui._closeButton;
+        console.log(`[Big Shot] _setNativePanelCollapsed(${collapsed}), panel=${!!panel}, closeBtn=${!!closeBtn}`);
         if (!panel) return;
 
         const duration = 200;
