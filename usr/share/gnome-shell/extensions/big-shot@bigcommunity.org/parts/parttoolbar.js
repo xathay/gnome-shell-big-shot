@@ -87,7 +87,7 @@ export class PartToolbar extends PartUI {
                 style_class: 'big-shot-edit-tool-btn',
                 toggle_mode: true,
                 can_focus: true,
-                child: new St.Icon({ gicon: this._getIcon(tool.icon), icon_size: 16 }),
+                child: new St.Icon({ gicon: this._getIcon(tool.icon), icon_size: 18 }),
                 accessible_name: tool.label(),
             });
             btn._toolId = tool.id;
@@ -144,6 +144,16 @@ export class PartToolbar extends PartUI {
             accessible_name: _('Brush Size'),
         });
         this._sizeButton.connect('clicked', () => this._showSizePopup());
+        this._sizeButton.connect('scroll-event', (_actor, event) => {
+            const dir = event.get_scroll_direction();
+            let sz = this.brushSize;
+            if (dir === Clutter.ScrollDirection.UP)
+                sz = Math.min(sz + 1, 100);
+            else if (dir === Clutter.ScrollDirection.DOWN)
+                sz = Math.max(sz - 1, 1);
+            this._setBrushSize(sz);
+            return Clutter.EVENT_STOP;
+        });
         this._sizeButton.connect('enter-event', () => this._showTooltip(this._sizeButton, _('Brush Size')));
         this._sizeButton.connect('leave-event', () => this._hideTooltip());
         this._editContainer.add_child(this._sizeButton);
@@ -189,6 +199,17 @@ export class PartToolbar extends PartUI {
             visible: false,
         });
         this._intensityButton.connect('clicked', () => this._showIntensityPopup());
+        this._intensityButton.connect('scroll-event', (_actor, event) => {
+            const dir = event.get_scroll_direction();
+            let lvl = this._intensityLevel;
+            if (dir === Clutter.ScrollDirection.UP)
+                lvl = Math.min(lvl + 1, 5);
+            else if (dir === Clutter.ScrollDirection.DOWN)
+                lvl = Math.max(lvl - 1, 1);
+            this._intensityLevel = lvl;
+            this._intensityLabel.text = String(lvl);
+            return Clutter.EVENT_STOP;
+        });
         this._intensityButton.connect('enter-event', () => this._showTooltip(this._intensityButton, _('Intensity')));
         this._intensityButton.connect('leave-event', () => this._hideTooltip());
         this._editContainer.add_child(this._intensityButton);
@@ -199,7 +220,7 @@ export class PartToolbar extends PartUI {
         // Undo
         this._undoButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
-            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 16 }),
+            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 18 }),
             can_focus: true,
             accessible_name: _('Undo'),
         });
@@ -211,7 +232,7 @@ export class PartToolbar extends PartUI {
         // Redo
         this._redoButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
-            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 16 }),
+            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 18 }),
             can_focus: true,
             accessible_name: _('Redo'),
         });
