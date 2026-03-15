@@ -74,45 +74,36 @@ export class PartToolbar extends PartUI {
         const panel = this._ui._panel;
         if (!panel) return;
 
-        // === Edit tools container (inserted INTO native panel when active) ===
+        // === Single edit row (inserted INTO native panel when active) ===
         this._editContainer = new St.BoxLayout({
-            vertical: true,
-            style_class: 'big-shot-edit-container',
+            style_class: 'big-shot-edit-row',
             reactive: true,
             x_align: Clutter.ActorAlign.CENTER,
         });
 
-        // Row 1: Drawing tool icons
-        const toolRow = new St.BoxLayout({
-            style_class: 'big-shot-edit-row',
-            x_align: Clutter.ActorAlign.CENTER,
-        });
+        // Drawing tool icons
         for (const tool of SCREENSHOT_TOOLS) {
             const btn = new St.Button({
                 style_class: 'big-shot-edit-tool-btn',
                 toggle_mode: true,
                 can_focus: true,
-                child: new St.Icon({ gicon: this._getIcon(tool.icon), icon_size: 20 }),
+                child: new St.Icon({ gicon: this._getIcon(tool.icon), icon_size: 16 }),
                 accessible_name: tool.label(),
             });
             btn._toolId = tool.id;
             btn.connect('clicked', () => this._onToolClicked(tool.id, btn));
             btn.connect('enter-event', () => this._showTooltip(btn, tool.label()));
             btn.connect('leave-event', () => this._hideTooltip());
-            toolRow.add_child(btn);
+            this._editContainer.add_child(btn);
             this._toolButtons.set(tool.id, btn);
         }
-        this._editContainer.add_child(toolRow);
 
-        // Row 2: Color + Fill + Size | Undo/Redo
-        const styleRow = new St.BoxLayout({
-            style_class: 'big-shot-edit-row',
-            x_align: Clutter.ActorAlign.CENTER,
-        });
+        // Separator between tools and style controls
+        this._editContainer.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
 
         // Color swatch
         this._colorSwatch = new St.Widget({
-            style: `background: ${this._currentColorHex}; border-radius: 50%; min-width: 20px; min-height: 20px; border: 2px solid rgba(255,255,255,0.3);`,
+            style: `background: ${this._currentColorHex}; border-radius: 50%; min-width: 16px; min-height: 16px; border: 2px solid rgba(255,255,255,0.3);`,
         });
         this._colorButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
@@ -123,11 +114,11 @@ export class PartToolbar extends PartUI {
         this._colorButton.connect('clicked', () => this._showColorPopup('stroke'));
         this._colorButton.connect('enter-event', () => this._showTooltip(this._colorButton, _('Color')));
         this._colorButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._colorButton);
+        this._editContainer.add_child(this._colorButton);
 
         // Fill swatch
         this._fillSwatch = new St.Widget({
-            style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; min-width: 20px; min-height: 20px;',
+            style: 'background: transparent; border: 2px dashed rgba(255,255,255,0.5); border-radius: 50%; min-width: 16px; min-height: 16px;',
         });
         this._fillButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
@@ -138,12 +129,12 @@ export class PartToolbar extends PartUI {
         this._fillButton.connect('clicked', () => this._showColorPopup('fill'));
         this._fillButton.connect('enter-event', () => this._showTooltip(this._fillButton, _('Fill')));
         this._fillButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._fillButton);
+        this._editContainer.add_child(this._fillButton);
 
-        // Size
+        // Brush size
         this._sizeLabel = new St.Label({
             text: '3',
-            style: 'color: #ffffff; font-size: 13px;',
+            style: 'color: #ffffff; font-size: 12px;',
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._sizeButton = new St.Button({
@@ -155,12 +146,12 @@ export class PartToolbar extends PartUI {
         this._sizeButton.connect('clicked', () => this._showSizePopup());
         this._sizeButton.connect('enter-event', () => this._showTooltip(this._sizeButton, _('Brush Size')));
         this._sizeButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._sizeButton);
+        this._editContainer.add_child(this._sizeButton);
 
         // Font selector (visible only for Text tool)
         this._fontLabel = new St.Label({
             text: this._currentFont,
-            style: 'color: #ffffff; font-size: 11px;',
+            style: 'color: #ffffff; font-size: 10px;',
             y_align: Clutter.ActorAlign.CENTER,
         });
         this._fontButton = new St.Button({
@@ -173,19 +164,19 @@ export class PartToolbar extends PartUI {
         this._fontButton.connect('clicked', () => this._showFontPopup());
         this._fontButton.connect('enter-event', () => this._showTooltip(this._fontButton, _('Font')));
         this._fontButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._fontButton);
+        this._editContainer.add_child(this._fontButton);
 
-        // Intensity level (visible only for Censor / Blur)
+        // Intensity (visible only for Censor / Blur)
         this._intensityLevel = 3;
         const intensityBox = new St.BoxLayout({ style: 'spacing: 2px;' });
         this._intensityIcon = new St.Icon({
             icon_name: 'view-grid-symbolic',
-            icon_size: 14,
+            icon_size: 12,
             style: 'color: #ffffff;',
         });
         this._intensityLabel = new St.Label({
             text: '3',
-            style: 'color: #ffffff; font-size: 13px;',
+            style: 'color: #ffffff; font-size: 12px;',
             y_align: Clutter.ActorAlign.CENTER,
         });
         intensityBox.add_child(this._intensityIcon);
@@ -200,36 +191,34 @@ export class PartToolbar extends PartUI {
         this._intensityButton.connect('clicked', () => this._showIntensityPopup());
         this._intensityButton.connect('enter-event', () => this._showTooltip(this._intensityButton, _('Intensity')));
         this._intensityButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._intensityButton);
+        this._editContainer.add_child(this._intensityButton);
 
         // Separator
-        styleRow.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
+        this._editContainer.add_child(new St.Widget({ style_class: 'big-shot-edit-sep' }));
 
         // Undo
         this._undoButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
-            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 20 }),
+            child: new St.Icon({ icon_name: 'edit-undo-symbolic', icon_size: 16 }),
             can_focus: true,
             accessible_name: _('Undo'),
         });
         this._undoButton.connect('clicked', () => this._onUndo());
         this._undoButton.connect('enter-event', () => this._showTooltip(this._undoButton, _('Undo')));
         this._undoButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._undoButton);
+        this._editContainer.add_child(this._undoButton);
 
         // Redo
         this._redoButton = new St.Button({
             style_class: 'big-shot-edit-tool-btn',
-            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 20 }),
+            child: new St.Icon({ icon_name: 'edit-redo-symbolic', icon_size: 16 }),
             can_focus: true,
             accessible_name: _('Redo'),
         });
         this._redoButton.connect('clicked', () => this._onRedo());
         this._redoButton.connect('enter-event', () => this._showTooltip(this._redoButton, _('Redo')));
         this._redoButton.connect('leave-event', () => this._hideTooltip());
-        styleRow.add_child(this._redoButton);
-
-        this._editContainer.add_child(styleRow);
+        this._editContainer.add_child(this._redoButton);
 
         // NOTE: _editContainer is NOT added to a parent yet.
         // It gets inserted into _panel when edit mode is toggled ON.

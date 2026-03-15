@@ -5,10 +5,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-/* ===== Edit Container (inline inside native panel) ===== */
+/* ===== Edit Container (single row inside native panel) ===== */
 .big-shot-edit-container {
-    spacing: 6px;
-    padding: 2px 0;
+    spacing: 4px;
 }
 
 /* Popups that still float (color picker, size picker, etc.) */
@@ -28,8 +27,8 @@
 .big-shot-edit-tool-btn {
     border-radius: 8px;
     padding: 4px;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 24px;
+    min-height: 24px;
     color: #ffffff;
 }
 
