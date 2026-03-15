@@ -277,6 +277,15 @@ export default class BigShotExtension extends Extension {
         // Revert save screenshot intercept
         this._unpatchSaveScreenshot();
 
+        // Clean up restore panel button
+        if (this._restorePanelBtn) {
+            this._restorePanelBtn.destroy();
+            this._restorePanelBtn = null;
+        }
+        // Dismiss any open config dialogs
+        this._dismissCloudConfigDialog();
+        this._dismissShareConfigDialog();
+
         this._screenshotUI = null;
         this._availableConfigs = null;
 
@@ -1063,10 +1072,40 @@ export default class BigShotExtension extends Extension {
             panel.add_style_class_name('big-shot-panel-hidden');
             if (closeBtn)
                 closeBtn.add_style_class_name('big-shot-panel-hidden');
+
+            // Show a small restore button
+            if (!this._restorePanelBtn) {
+                this._restorePanelBtn = new St.Button({
+                    style: `background: rgba(30,30,30,0.85); border-radius: 20px;
+                            padding: 6px 12px; color: #fff; font-size: 12px;`,
+                    label: _('Show panel'),
+                    x_align: Clutter.ActorAlign.CENTER,
+                    y_align: Clutter.ActorAlign.END,
+                    reactive: true,
+                });
+                this._restorePanelBtn.connect('clicked', () => {
+                    this._toolbar.selectTool(null);
+                });
+                ui.add_child(this._restorePanelBtn);
+                // Position at bottom center
+                this._restorePanelBtn.add_constraint(new Clutter.AlignConstraint({
+                    source: ui,
+                    align_axis: Clutter.AlignAxis.X_AXIS,
+                    factor: 0.5,
+                }));
+                this._restorePanelBtn.add_constraint(new Clutter.AlignConstraint({
+                    source: ui,
+                    align_axis: Clutter.AlignAxis.Y_AXIS,
+                    factor: 0.98,
+                }));
+            }
+            this._restorePanelBtn.visible = true;
         } else {
             panel.remove_style_class_name('big-shot-panel-hidden');
             if (closeBtn)
                 closeBtn.remove_style_class_name('big-shot-panel-hidden');
+            if (this._restorePanelBtn)
+                this._restorePanelBtn.visible = false;
         }
     }
 
@@ -1078,16 +1117,22 @@ export default class BigShotExtension extends Extension {
 
         const ui = this._screenshotUI;
 
-        // Semi-transparent backdrop
-        const backdrop = new St.Bin({
+        // Full-screen backdrop using constraints
+        const backdrop = new St.Widget({
             style: 'background: rgba(0,0,0,0.5);',
             reactive: true,
-            x_expand: true,
-            y_expand: true,
+            layout_manager: new Clutter.BinLayout(),
         });
-        backdrop.connect('button-press-event', () => {
-            this._dismissCloudConfigDialog();
-            return Clutter.EVENT_STOP;
+        backdrop.add_constraint(new Clutter.BindConstraint({
+            source: global.stage,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        backdrop.connect('button-press-event', (_actor, event) => {
+            if (event.get_source() === backdrop) {
+                this._dismissCloudConfigDialog();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
 
         // Dialog panel
@@ -1212,7 +1257,7 @@ export default class BigShotExtension extends Extension {
         btnRow.add_child(resetBtn);
 
         dialog.add_child(btnRow);
-        backdrop.set_child(dialog);
+        backdrop.add_child(dialog);
 
         this._cloudConfigDialog = backdrop;
         ui.add_child(backdrop);
@@ -1239,15 +1284,21 @@ export default class BigShotExtension extends Extension {
 
         const ui = this._screenshotUI;
 
-        const backdrop = new St.Bin({
+        const backdrop = new St.Widget({
             style: 'background: rgba(0,0,0,0.5);',
             reactive: true,
-            x_expand: true,
-            y_expand: true,
+            layout_manager: new Clutter.BinLayout(),
         });
-        backdrop.connect('button-press-event', () => {
-            this._dismissShareConfigDialog();
-            return Clutter.EVENT_STOP;
+        backdrop.add_constraint(new Clutter.BindConstraint({
+            source: global.stage,
+            coordinate: Clutter.BindCoordinate.SIZE,
+        }));
+        backdrop.connect('button-press-event', (_actor, event) => {
+            if (event.get_source() === backdrop) {
+                this._dismissShareConfigDialog();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
         });
 
         const dialog = new St.BoxLayout({
@@ -1366,7 +1417,7 @@ export default class BigShotExtension extends Extension {
         btnRow.add_child(resetBtn);
 
         dialog.add_child(btnRow);
-        backdrop.set_child(dialog);
+        backdrop.add_child(dialog);
 
         this._shareConfigDialog = backdrop;
         ui.add_child(backdrop);
