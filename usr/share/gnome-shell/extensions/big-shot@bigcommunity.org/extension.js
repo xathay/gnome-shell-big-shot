@@ -1068,47 +1068,16 @@ export default class BigShotExtension extends Extension {
 
         const panel = ui._panel;
         const closeBtn = ui._closeButton;
-        console.log(`[Big Shot] _setNativePanelCollapsed(${collapsed}), panel=${!!panel}, closeBtn=${!!closeBtn}`);
         if (!panel) return;
 
         if (collapsed) {
             panel.add_style_class_name('big-shot-panel-hidden');
             if (closeBtn)
                 closeBtn.add_style_class_name('big-shot-panel-hidden');
-
-            // Show a small restore button
-            if (!this._restorePanelBtn) {
-                this._restorePanelBtn = new St.Button({
-                    style: `background: rgba(30,30,30,0.85); border-radius: 20px;
-                            padding: 6px 12px; color: #fff; font-size: 12px;`,
-                    label: _('Show panel'),
-                    x_align: Clutter.ActorAlign.CENTER,
-                    y_align: Clutter.ActorAlign.END,
-                    reactive: true,
-                });
-                this._restorePanelBtn.connect('clicked', () => {
-                    this._toolbar.selectTool(null);
-                });
-                ui.add_child(this._restorePanelBtn);
-                // Position at bottom center
-                this._restorePanelBtn.add_constraint(new Clutter.AlignConstraint({
-                    source: ui,
-                    align_axis: Clutter.AlignAxis.X_AXIS,
-                    factor: 0.5,
-                }));
-                this._restorePanelBtn.add_constraint(new Clutter.AlignConstraint({
-                    source: ui,
-                    align_axis: Clutter.AlignAxis.Y_AXIS,
-                    factor: 0.98,
-                }));
-            }
-            this._restorePanelBtn.visible = true;
         } else {
             panel.remove_style_class_name('big-shot-panel-hidden');
             if (closeBtn)
                 closeBtn.remove_style_class_name('big-shot-panel-hidden');
-            if (this._restorePanelBtn)
-                this._restorePanelBtn.visible = false;
         }
     }
 
