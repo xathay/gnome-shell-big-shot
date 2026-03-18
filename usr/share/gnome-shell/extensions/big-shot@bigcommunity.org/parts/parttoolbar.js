@@ -633,6 +633,42 @@ export class PartToolbar extends PartUI {
         this._maskRow.add_child(this._maskButtonsRow);
         this._videoContainer.add_child(this._maskRow);
 
+        // Row 4: Webcam size selection (visible only when webcam is on)
+        this._sizeRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
+        this._sizeRow.visible = false;
+        this._sizeRow.add_child(new St.Label({
+            text: _('Size'),
+            style: 'color: rgba(255,255,255,0.6); font-size: 12px; min-width: 50px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._sizeButtonsRow = new St.BoxLayout({ style: 'spacing: 4px;' });
+        this._sizeButtons = new Map();
+        this._selectedSizeId = 'M';
+
+        const sizeOptions = [
+            { id: 'XS', label: 'XS', width: 120 },
+            { id: 'S', label: 'S', width: 200 },
+            { id: 'M', label: 'M', width: 320 },
+            { id: 'L', label: 'L', width: 480 },
+            { id: 'XL', label: 'XL', width: 640 },
+        ];
+        for (const s of sizeOptions) {
+            const btn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                toggle_mode: true,
+                can_focus: true,
+                label: s.label,
+            });
+            btn.checked = (s.id === this._selectedSizeId);
+            const sid = s.id;
+            const swidth = s.width;
+            btn.connect('clicked', () => this._onSizeClicked(sid, swidth));
+            this._sizeButtonsRow.add_child(btn);
+            this._sizeButtons.set(s.id, btn);
+        }
+        this._sizeRow.add_child(this._sizeButtonsRow);
+        this._videoContainer.add_child(this._sizeRow);
+
         // NOTE: _videoContainer is NOT added to a parent yet.
 
         // === Edit toggle button — in _showPointerButtonContainer ===
@@ -1203,6 +1239,19 @@ export class PartToolbar extends PartUI {
     /** Register callback for mask selection changes. */
     onMaskChanged(callback) {
         this._maskChangedCallback = callback;
+    }
+
+    _onSizeClicked(sizeId, width) {
+        this._selectedSizeId = sizeId;
+        for (const [id, btn] of this._sizeButtons) {
+            btn.checked = (id === sizeId);
+        }
+        this._sizeChangedCallback?.(width);
+    }
+
+    /** Register callback for webcam size changes. */
+    onSizeChanged(callback) {
+        this._sizeChangedCallback = callback;
     }
 
     _populateVideoCodecs() {
