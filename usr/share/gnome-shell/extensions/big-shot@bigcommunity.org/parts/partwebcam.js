@@ -30,7 +30,7 @@ try {
     // GStreamer not available
 }
 
-const WEBCAM_DEFAULT_WIDTH = 200;
+const WEBCAM_DEFAULT_WIDTH = 320;
 
 const BUILTIN_MASKS = [
     { id: 'none',             label: 'None' },
@@ -96,6 +96,8 @@ export class PartWebcam extends PartUI {
         this._webcamButton.visible = false;
 
         this._webcamButton.connect('notify::checked', () => {
+            if (this._resettingButton)
+                return;
             this.enabled = this._webcamButton.checked;
             if (this._enabled)
                 this.startPreview();
@@ -131,6 +133,18 @@ export class PartWebcam extends PartUI {
     set maskId(val) {
         this._maskId = val;
         this._updateContainerLayout();
+    }
+
+    get width() { return this._width; }
+    set width(val) {
+        if (this._width === val)
+            return;
+        this._width = val;
+        // If currently previewing, restart with new size
+        if (this._enabled && this._pipeline && !this._probing) {
+            this._stopPipeline();
+            this._startPipeline();
+        }
     }
 
     get masks() { return BUILTIN_MASKS; }
@@ -635,13 +649,71 @@ export class PartWebcam extends PartUI {
     // GStreamer pipeline
     // =========================================================================
 
-    _findWebcamDevice() {
+    _findWebcamDevices() {
+        const devices = [];
         for (let i = 0; i < 10; i++) {
             const path = `/dev/video${i}`;
             if (GLib.file_test(path, GLib.FileTest.EXISTS))
-                return path;
+                devices.push(path);
         }
-        return null;
+        return devices;
+    }
+
+    /** Try to start a v4l2src probe pipeline on the given device.
+     *  Returns true if the pipeline started successfully. */
+    _tryV4l2Device(device) {
+        try {
+            const probeStr = [
+                `v4l2src device=${device} !`,
+                'videoconvert !',
+                'video/x-raw,format=RGBA !',
+                'appsink name=sink max-buffers=1 drop=true sync=false',
+            ].join(' ');
+
+            const pipeline = Gst.parse_launch(probeStr);
+            const ret = pipeline.set_state(Gst.State?.PAUSED ?? 2);
+            const FAILURE = Gst.StateChangeReturn?.FAILURE ?? 0;
+
+            if (ret === FAILURE) {
+                pipeline.set_state(Gst.State?.NULL ?? 1);
+                return false;
+            }
+
+            this._pipeline = pipeline;
+            this._sink = pipeline.get_by_name('sink');
+            this._pipeline.set_state(Gst.State?.PLAYING ?? 4);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /** Try pipewiresrc as a fallback for cameras accessible via PipeWire. */
+    _tryPipeWireSrc() {
+        try {
+            const probeStr = [
+                'pipewiresrc !',
+                'videoconvert !',
+                'video/x-raw,format=RGBA !',
+                'appsink name=sink max-buffers=1 drop=true sync=false',
+            ].join(' ');
+
+            const pipeline = Gst.parse_launch(probeStr);
+            const ret = pipeline.set_state(Gst.State?.PAUSED ?? 2);
+            const FAILURE = Gst.StateChangeReturn?.FAILURE ?? 0;
+
+            if (ret === FAILURE) {
+                pipeline.set_state(Gst.State?.NULL ?? 1);
+                return false;
+            }
+
+            this._pipeline = pipeline;
+            this._sink = pipeline.get_by_name('sink');
+            this._pipeline.set_state(Gst.State?.PLAYING ?? 4);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     _startPipeline() {
@@ -654,40 +726,67 @@ export class PartWebcam extends PartUI {
             // Already initialized
         }
 
-        const device = this._findWebcamDevice();
-        if (!device) {
-            console.warn('[Big Shot Webcam] No webcam device found');
+        // Try each /dev/video* device, validating capture capability
+        const devices = this._findWebcamDevices();
+        let started = false;
+        for (const device of devices) {
+            if (this._tryV4l2Device(device)) {
+                started = true;
+                this._activeDevice = device;
+                break;
+            }
+        }
+
+        // Fallback: try PipeWire source
+        if (!started) {
+            if (this._tryPipeWireSrc()) {
+                started = true;
+                this._activeDevice = 'pipewire';
+            }
+        }
+
+        if (!started) {
+            console.warn('[Big Shot Webcam] No usable webcam device found');
+            this._onWebcamFailed();
             return;
         }
 
-        // Phase 1: Probe native resolution (no videoscale)
+        // Phase 1: Probe native resolution
         this._probing = true;
-        try {
-            const probeStr = [
-                `v4l2src device=${device} !`,
-                'videoconvert !',
-                'video/x-raw,format=RGBA !',
-                'appsink name=sink max-buffers=1 drop=true sync=false',
-            ].join(' ');
+        this._probeStartTime = GLib.get_monotonic_time();
 
-            this._pipeline = Gst.parse_launch(probeStr);
-            this._sink = this._pipeline.get_by_name('sink');
-            this._pipeline.set_state(Gst.State?.PLAYING ?? 4);
+        this._pollTimerId = GLib.timeout_add(GLib.PRIORITY_HIGH, 50, () => {
+            return this._probeFrame(this._activeDevice);
+        });
+    }
 
-            this._pollTimerId = GLib.timeout_add(GLib.PRIORITY_HIGH, 50, () => {
-                return this._probeFrame(device);
-            });
-        } catch (e) {
-            console.error(`[Big Shot Webcam] Probe failed: ${e.message}`);
-            this._probing = false;
-            this._pipeline = null;
-        }
+    /** Called when no webcam device could be started. Resets UI state. */
+    _onWebcamFailed() {
+        this._probing = false;
+        this._pipeline = null;
+        this._sink = null;
+        this._enabled = false;
+        this._resettingButton = true;
+        if (this._webcamButton)
+            this._webcamButton.checked = false;
+        this._resettingButton = false;
+        this._destroyOverlay();
+        this._webcamToggledCallback?.(false);
     }
 
     /** Read first frame to detect native webcam resolution, then start render pipeline. */
     _probeFrame(device) {
         if (!this._sink)
             return GLib.SOURCE_REMOVE;
+
+        // Timeout: abort if no frame within 5 seconds
+        const elapsed = (GLib.get_monotonic_time() - this._probeStartTime) / 1e6;
+        if (elapsed > 5.0) {
+            console.warn('[Big Shot Webcam] Probe timed out — no frames received');
+            this._stopPipeline();
+            this._onWebcamFailed();
+            return GLib.SOURCE_REMOVE;
+        }
 
         const sample = this._sink.try_pull_sample(0);
         if (!sample)
@@ -725,8 +824,12 @@ export class PartWebcam extends PartUI {
 
     _startRenderPipeline(device, w, h) {
         try {
+            const srcElement = device === 'pipewire'
+                ? 'pipewiresrc !'
+                : `v4l2src device=${device} !`;
+
             const pipelineStr = [
-                `v4l2src device=${device} !`,
+                srcElement,
                 'videoflip method=horizontal-flip !',
                 'videoconvert ! videoscale !',
                 `video/x-raw,format=RGBA,width=${w},height=${h} !`,
@@ -735,7 +838,17 @@ export class PartWebcam extends PartUI {
 
             this._pipeline = Gst.parse_launch(pipelineStr);
             this._sink = this._pipeline.get_by_name('sink');
-            this._pipeline.set_state(Gst.State?.PLAYING ?? 4);
+
+            const ret = this._pipeline.set_state(Gst.State?.PLAYING ?? 4);
+            const FAILURE = Gst.StateChangeReturn?.FAILURE ?? 0;
+            if (ret === FAILURE) {
+                console.warn('[Big Shot Webcam] Render pipeline failed to start');
+                this._pipeline.set_state(Gst.State?.NULL ?? 1);
+                this._pipeline = null;
+                this._sink = null;
+                this._onWebcamFailed();
+                return;
+            }
 
             this._pollTimerId = GLib.timeout_add(GLib.PRIORITY_HIGH, 33, () => {
                 this._pollFrame();
@@ -744,6 +857,7 @@ export class PartWebcam extends PartUI {
         } catch (e) {
             console.error(`[Big Shot Webcam] Pipeline failed: ${e.message}`);
             this._pipeline = null;
+            this._onWebcamFailed();
         }
     }
 
@@ -805,6 +919,8 @@ export class PartWebcam extends PartUI {
         }
         this._sink = null;
         this._probing = false;
+        this._activeDevice = null;
+        this._probeStartTime = 0;
 
         if (this._pipeline) {
             try {

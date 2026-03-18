@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '0.5.0';
+export const APP_VERSION = '0.6.0';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -973,15 +973,22 @@ export default class BigShotExtension extends Extension {
         this._webcam = new PartWebcam(ui, ext);
         this._parts.push(this._webcam);
 
-        // Wire webcam toggle (bottom bar button) to mask row visibility
+        // Wire webcam toggle (bottom bar button) to mask/size row visibility
         this._webcam.onWebcamToggled((enabled) => {
             if (this._toolbar._maskRow)
                 this._toolbar._maskRow.visible = enabled;
+            if (this._toolbar._sizeRow)
+                this._toolbar._sizeRow.visible = enabled;
         });
 
         // Wire mask selection from toolbar
         this._toolbar.onMaskChanged((maskId) => {
             this._webcam.maskId = maskId;
+        });
+
+        // Wire size selection from toolbar
+        this._toolbar.onSizeChanged((width) => {
+            this._webcam.width = width;
         });
 
         // Stop webcam preview when UI closes without active recording
