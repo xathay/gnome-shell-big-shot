@@ -199,6 +199,9 @@ msgstr "Ornat"
 msgid "Rings"
 msgstr "Inele"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Dimensiune"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Edita"
 #: NEEDS WORK

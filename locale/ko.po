@@ -199,6 +199,9 @@ msgstr "화려한"
 msgid "Rings"
 msgstr "링스"
 #: NEEDS WORK
+msgid "Size"
+msgstr "크기"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "편집"
 #: NEEDS WORK

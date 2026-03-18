@@ -199,6 +199,9 @@ msgstr "Διακοσμητικός"
 msgid "Rings"
 msgstr "Δαχτυλίδια"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Μέγεθος"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Επεξεργασία"
 #: NEEDS WORK

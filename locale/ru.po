@@ -199,6 +199,9 @@ msgstr "Оформленный"
 msgid "Rings"
 msgstr "Кольца"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Размер"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Редактировать"
 #: NEEDS WORK

@@ -199,6 +199,9 @@ msgstr "Utsmyckad"
 msgid "Rings"
 msgstr "Ringar"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Storlek"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Redigera"
 #: NEEDS WORK

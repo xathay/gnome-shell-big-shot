@@ -199,6 +199,9 @@ msgstr "Ornate"
 msgid "Rings"
 msgstr "Кільця"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Size"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Редагувати"
 #: NEEDS WORK

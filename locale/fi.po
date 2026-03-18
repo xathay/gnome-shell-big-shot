@@ -199,6 +199,9 @@ msgstr "Yksityiskohtainen"
 msgid "Rings"
 msgstr "Renkaat"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Koko"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Muokkaa"
 #: NEEDS WORK

@@ -199,6 +199,9 @@ msgstr "díszes"
 msgid "Rings"
 msgstr "Gyűrűk"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Méret"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Szerkesztés"
 #: NEEDS WORK

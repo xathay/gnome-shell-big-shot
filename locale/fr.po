@@ -199,6 +199,9 @@ msgstr "Orné"
 msgid "Rings"
 msgstr "Anneaux"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Taille"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Modifier"
 #: NEEDS WORK

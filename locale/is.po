@@ -199,6 +199,9 @@ msgstr "Skrúðgagn"
 msgid "Rings"
 msgstr "Hringir"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Stærð"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Breyta"
 #: NEEDS WORK

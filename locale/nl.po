@@ -199,6 +199,9 @@ msgstr "Versierd"
 msgid "Rings"
 msgstr "Ringen"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Grootte"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Bewerken"
 #: NEEDS WORK

@@ -199,6 +199,9 @@ msgstr "Ozdobený"
 msgid "Rings"
 msgstr "Kruhy"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Velikost"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Upravit"
 #: NEEDS WORK

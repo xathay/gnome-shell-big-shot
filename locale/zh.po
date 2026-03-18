@@ -199,6 +199,9 @@ msgstr "华丽"
 msgid "Rings"
 msgstr "环"
 #: NEEDS WORK
+msgid "Size"
+msgstr "大小"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "编辑"
 #: NEEDS WORK

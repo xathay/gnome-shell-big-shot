@@ -198,6 +198,9 @@ msgstr "Ornate"
 msgid "Rings"
 msgstr "Rings"
 
+msgid "Size"
+msgstr "Size"
+
 msgid "Edit"
 msgstr "Edit"
 

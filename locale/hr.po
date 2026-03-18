@@ -199,6 +199,9 @@ msgstr "Ukrasni"
 msgid "Rings"
 msgstr "Prstenovi"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Veličina"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Uredi"
 #: NEEDS WORK

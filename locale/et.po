@@ -199,6 +199,9 @@ msgstr "Dekoratiivne"
 msgid "Rings"
 msgstr "Rõngad"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Suurus"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Redigeeri"
 #: NEEDS WORK

@@ -199,6 +199,9 @@ msgstr "華麗"
 msgid "Rings"
 msgstr "リング"
 #: NEEDS WORK
+msgid "Size"
+msgstr "サイズ"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "編集"
 #: NEEDS WORK

@@ -199,6 +199,9 @@ msgstr "Süslü"
 msgid "Rings"
 msgstr "Halkalar"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Boyut"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Düzenle"
 #: NEEDS WORK

@@ -197,6 +197,9 @@ msgstr  ""
 msgid   "Rings"
 msgstr  ""
 
+msgid   "Size"
+msgstr  ""
+
 msgid   "Edit"
 msgstr  ""
 

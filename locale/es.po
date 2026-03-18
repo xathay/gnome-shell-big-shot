@@ -199,6 +199,9 @@ msgstr "Ornado"
 msgid "Rings"
 msgstr "Anillos"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Tamaño"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Editar"
 #: NEEDS WORK

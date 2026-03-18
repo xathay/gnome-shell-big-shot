@@ -199,6 +199,9 @@ msgstr "Украсен"
 msgid "Rings"
 msgstr "Пръстени"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Размер"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Редактиране"
 #: NEEDS WORK

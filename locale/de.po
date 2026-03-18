@@ -199,6 +199,9 @@ msgstr "Verziert"
 msgid "Rings"
 msgstr "Ringe"
 #: NEEDS WORK
+msgid "Size"
+msgstr "Größe"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Bearbeiten"
 #: NEEDS WORK
