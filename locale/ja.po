@@ -61,6 +61,12 @@ msgstr "グラデーション角度"
 msgid "Border Radius"
 msgstr "ボーダー半径"
 #: NEEDS WORK
+msgid "Webcam"
+msgstr "ウェブカメラ"
+#: NEEDS WORK
+msgid "Webcam Overlay"
+msgstr "ウェブカメラオーバーレイ"
+#: NEEDS WORK
 msgid "Frames per second"
 msgstr "フレーム毎秒"
 #: NEEDS WORK
@@ -122,7 +128,7 @@ msgid "Fill"
 msgstr "塗りつぶし"
 #: NEEDS WORK
 msgid "Decrease Size"
-msgstr "サイズを減らす"
+msgstr "サイズを縮小"
 #: NEEDS WORK
 msgid "Brush Size"
 msgstr "ブラシサイズ"
@@ -151,6 +157,9 @@ msgstr "名前を付けて保存…"
 msgid "Close"
 msgstr "閉じる"
 #: NEEDS WORK
+msgid "Video Settings"
+msgstr "ビデオ設定"
+#: NEEDS WORK
 msgid "Quality"
 msgstr "品質"
 #: NEEDS WORK
@@ -169,8 +178,35 @@ msgstr "録音品質（ビットレート）"
 msgid "Codec"
 msgstr "コーデック"
 #: NEEDS WORK
+msgid "Mask"
+msgstr "マスク"
+#: NEEDS WORK
+msgid "None"
+msgstr "None"
+#: NEEDS WORK
+msgid "Circle"
+msgstr "サークル"
+#: NEEDS WORK
+msgid "Soft"
+msgstr "ソフト"
+#: NEEDS WORK
+msgid "Spot"
+msgstr "スポット"
+#: NEEDS WORK
+msgid "Ornate"
+msgstr "華麗"
+#: NEEDS WORK
+msgid "Rings"
+msgstr "リング"
+#: NEEDS WORK
+msgid "Size"
+msgstr "サイズ"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "編集"
+#: NEEDS WORK
+msgid "Edit Screenshot"
+msgstr "スクリーンショットを編集"
 #: NEEDS WORK
 msgid "Custom"
 msgstr "カスタム"

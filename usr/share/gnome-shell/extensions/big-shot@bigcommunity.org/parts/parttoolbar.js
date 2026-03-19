@@ -81,6 +81,8 @@ export class PartToolbar extends PartUI {
         this._editContainer = new St.BoxLayout({
             style_class: 'big-shot-edit-row big-shot-edit-floating',
             reactive: true,
+            // Prevent BinLayout (screenshotUI) from stretching height
+            y_align: Clutter.ActorAlign.START,
         });
 
         // Drag handle — visible grippy area for dragging
@@ -99,7 +101,7 @@ export class PartToolbar extends PartUI {
         // Toggle native panel visibility — separator + button
         const panelSep = new St.Widget({
             style: 'background: rgba(255,255,255,0.15); min-width: 1px; margin: 4px 2px;',
-            y_expand: true,
+            y_align: Clutter.ActorAlign.FILL,
         });
         this._editContainer.add_child(panelSep);
 
@@ -187,20 +189,32 @@ export class PartToolbar extends PartUI {
                 }
             }
 
-            if (!this._dragging) return Clutter.EVENT_PROPAGATE;
+            if (!this._dragging && !this._videoDragging) return Clutter.EVENT_PROPAGATE;
             if (type === Clutter.EventType.MOTION) {
                 const [mx, my] = event.get_coords();
-                const dx = mx - this._dragStartX;
-                const dy = my - this._dragStartY;
-                if (Math.abs(dx) < 4 && Math.abs(dy) < 4)
-                    return Clutter.EVENT_PROPAGATE;
-                this._editContainer.set_position(
-                    mx + this._dragOffsetX,
-                    my + this._dragOffsetY,
-                );
+                if (this._dragging) {
+                    const dx = mx - this._dragStartX;
+                    const dy = my - this._dragStartY;
+                    if (Math.abs(dx) < 4 && Math.abs(dy) < 4)
+                        return Clutter.EVENT_PROPAGATE;
+                    this._editContainer.set_position(
+                        mx + this._dragOffsetX,
+                        my + this._dragOffsetY,
+                    );
+                } else if (this._videoDragging) {
+                    const dx = mx - this._videoDragStartX;
+                    const dy = my - this._videoDragStartY;
+                    if (Math.abs(dx) < 4 && Math.abs(dy) < 4)
+                        return Clutter.EVENT_PROPAGATE;
+                    this._videoContainer.set_position(
+                        mx + this._videoDragOffsetX,
+                        my + this._videoDragOffsetY,
+                    );
+                }
                 return Clutter.EVENT_STOP;
             } else if (type === Clutter.EventType.BUTTON_RELEASE) {
                 this._dragging = false;
+                this._videoDragging = false;
                 return Clutter.EVENT_STOP;
             }
             return Clutter.EVENT_PROPAGATE;
@@ -448,7 +462,7 @@ export class PartToolbar extends PartUI {
         // Close button — shown only when the native panel is hidden (no orphaned X at top)
         this._toolbarCloseSep = new St.Widget({
             style: 'background: rgba(255,255,255,0.15); min-width: 1px; margin: 4px 2px;',
-            y_expand: true,
+            y_align: Clutter.ActorAlign.FILL,
             visible: false,
         });
         this._editContainer.add_child(this._toolbarCloseSep);
@@ -473,12 +487,71 @@ export class PartToolbar extends PartUI {
         // NOTE: _editContainer is NOT added to a parent yet.
         // It gets inserted into _panel when edit mode is toggled ON.
 
-        // === Video Settings Container (also inserted INTO _panel) ===
+        // === Video Settings Container (floating, like _editContainer) ===
         this._videoContainer = new St.BoxLayout({
             vertical: true,
-            style_class: 'big-shot-edit-container',
+            style_class: 'big-shot-edit-container big-shot-edit-floating',
             reactive: true,
-            x_align: Clutter.ActorAlign.CENTER,
+            style: 'spacing: 8px; padding: 8px 12px;',
+            // Prevent BinLayout (screenshotUI) from stretching height
+            y_align: Clutter.ActorAlign.START,
+        });
+
+        // Header row (drag handle + label)
+        const videoHeaderRow = new St.BoxLayout({ style: 'spacing: 6px;' });
+
+        this._videoDragHandle = new St.Bin({
+            child: new St.Icon({
+                icon_name: 'open-menu-symbolic',
+                icon_size: 16,
+                style: 'color: rgba(255,255,255,0.5);',
+            }),
+            reactive: true,
+            track_hover: true,
+            style: 'padding: 4px 6px; cursor: grab;',
+        });
+        videoHeaderRow.add_child(this._videoDragHandle);
+
+        videoHeaderRow.add_child(new St.Label({
+            text: _('Video Settings'),
+            style: 'color: rgba(255,255,255,0.7); font-size: 12px; font-weight: bold;',
+            y_align: Clutter.ActorAlign.CENTER,
+            x_expand: true,
+        }));
+
+        this._videoContainer.add_child(videoHeaderRow);
+
+        // Video drag state
+        this._videoDragging = false;
+
+        this._videoDragHandle.connect('button-press-event', (_actor, event) => {
+            if (event.get_button() !== 1) return Clutter.EVENT_PROPAGATE;
+            const [mx, my] = event.get_coords();
+            const [ax, ay] = this._videoContainer.get_transformed_position();
+            this._videoDragging = true;
+            this._videoDragStartX = mx;
+            this._videoDragStartY = my;
+            this._videoDragOffsetX = ax - mx;
+            this._videoDragOffsetY = ay - my;
+            return Clutter.EVENT_STOP;
+        });
+
+        // Opacity hover effects
+        this._videoContainer.opacity = 230;
+        this._videoContainer.connect('enter-event', () => {
+            this._videoContainer.ease({
+                opacity: 255,
+                duration: 150,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
+        });
+        this._videoContainer.connect('leave-event', () => {
+            if (this._videoDragging) return;
+            this._videoContainer.ease({
+                opacity: 230,
+                duration: 300,
+                mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            });
         });
 
         // Row 1: Quality label + buttons
@@ -523,6 +596,79 @@ export class PartToolbar extends PartUI {
         this._videoContainer.add_child(codecBox);
         this._codecButtons = new Map();
 
+        // Row 3: Mask selection (visible only when webcam is on)
+        this._maskRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
+        this._maskRow.visible = false;
+        this._maskRow.add_child(new St.Label({
+            text: _('Mask'),
+            style: 'color: rgba(255,255,255,0.6); font-size: 12px; min-width: 50px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._maskButtonsRow = new St.BoxLayout({ style: 'spacing: 4px;' });
+        this._maskButtons = new Map();
+        this._selectedMaskId = 'circle';
+
+        const maskOptions = [
+            { id: 'none', label: _('None') },
+            { id: 'circle', label: _('Circle') },
+            { id: 'ellipse', label: _('Oval') },
+            { id: 'soft-circle', label: _('Soft') },
+            { id: 'spotlight', label: _('Spot') },
+            { id: 'ornate-frame', label: _('Ornate') },
+            { id: 'checker', label: _('Checker') },
+        ];
+        for (const m of maskOptions) {
+            const btn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                toggle_mode: true,
+                can_focus: true,
+                label: m.label,
+            });
+            btn.checked = (m.id === this._selectedMaskId);
+            const mid = m.id;
+            btn.connect('clicked', () => this._onMaskClicked(mid));
+            this._maskButtonsRow.add_child(btn);
+            this._maskButtons.set(m.id, btn);
+        }
+        this._maskRow.add_child(this._maskButtonsRow);
+        this._videoContainer.add_child(this._maskRow);
+
+        // Row 4: Webcam size selection (visible only when webcam is on)
+        this._sizeRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
+        this._sizeRow.visible = false;
+        this._sizeRow.add_child(new St.Label({
+            text: _('Size'),
+            style: 'color: rgba(255,255,255,0.6); font-size: 12px; min-width: 50px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._sizeButtonsRow = new St.BoxLayout({ style: 'spacing: 4px;' });
+        this._sizeButtons = new Map();
+        this._selectedSizeId = 'M';
+
+        const sizeOptions = [
+            { id: 'XS', label: 'XS', width: 120 },
+            { id: 'S', label: 'S', width: 200 },
+            { id: 'M', label: 'M', width: 320 },
+            { id: 'L', label: 'L', width: 480 },
+            { id: 'XL', label: 'XL', width: 640 },
+        ];
+        for (const s of sizeOptions) {
+            const btn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                toggle_mode: true,
+                can_focus: true,
+                label: s.label,
+            });
+            btn.checked = (s.id === this._selectedSizeId);
+            const sid = s.id;
+            const swidth = s.width;
+            btn.connect('clicked', () => this._onSizeClicked(sid, swidth));
+            this._sizeButtonsRow.add_child(btn);
+            this._sizeButtons.set(s.id, btn);
+        }
+        this._sizeRow.add_child(this._sizeButtonsRow);
+        this._videoContainer.add_child(this._sizeRow);
+
         // NOTE: _videoContainer is NOT added to a parent yet.
 
         // === Edit toggle button — in _showPointerButtonContainer ===
@@ -532,6 +678,14 @@ export class PartToolbar extends PartUI {
             can_focus: true,
             child: new St.Icon({ icon_name: 'document-edit-symbolic', icon_size: 16 }),
             accessible_name: _('Edit'),
+        });
+        this._editButton.track_hover = true;
+        this._editButton.connect('notify::hover', () => {
+            if (this._editButton.hover)
+                this._showTooltip(this._editButton,
+                    this._isCastMode ? _('Video Settings') : _('Edit Screenshot'));
+            else
+                this._hideTooltip();
         });
         this._editButton.connect('notify::checked', () => {
             this._editMode = this._editButton.checked;
@@ -570,19 +724,19 @@ export class PartToolbar extends PartUI {
         if (this._editContainer.get_parent()) return;
         this._ui.add_child(this._editContainer);
 
-        // Read panel position BEFORE hiding it
+        // Position editContainer above the native panel
         const panel = this._ui._panel;
         if (panel) {
             const [px, py] = panel.get_transformed_position();
             const pw = panel.width;
             const cw = this._editContainer.get_preferred_width(-1)[1] || 600;
+            const ch = this._editContainer.get_preferred_height(-1)[1] || 40;
             this._editContainer.set_position(
                 px + (pw - cw) / 2,
-                py - this._editContainer.get_preferred_height(-1)[1] - 12,
+                py - ch - 12,
             );
         }
 
-        // Hide native panel after positioning
         this._setNativePanelVisible(false);
 
         // Fade-in
@@ -598,7 +752,6 @@ export class PartToolbar extends PartUI {
     _detachEditFromPanel() {
         const parent = this._editContainer.get_parent();
         if (parent) parent.remove_child(this._editContainer);
-        // Restore native panel visibility
         this._setNativePanelVisible(true);
     }
 
@@ -616,27 +769,48 @@ export class PartToolbar extends PartUI {
         if (visible) {
             panel.show();
             this._panelToggleBtn.child.icon_name = 'view-conceal-symbolic';
-            // Restore the native close button in its original position
             if (monitorBin) monitorBin.show();
             if (this._toolbarCloseSep) this._toolbarCloseSep.hide();
             if (this._toolbarCloseBtn) this._toolbarCloseBtn.hide();
         } else {
             panel.hide();
             this._panelToggleBtn.child.icon_name = 'view-reveal-symbolic';
-            // Hide _primaryMonitorBin so the X doesn't float alone at the top;
-            // expose a close button inside the floating toolbar instead.
             if (monitorBin) monitorBin.hide();
             if (this._toolbarCloseSep) this._toolbarCloseSep.show();
             if (this._toolbarCloseBtn) this._toolbarCloseBtn.show();
         }
     }
 
-    /** Insert video settings at position 0 of the native panel. */
+    /** Add video settings as floating actor above the native panel. */
     _attachVideoToPanel() {
-        const panel = this._ui._panel;
-        if (!panel || this._videoContainer.get_parent()) return;
+        if (this._videoContainer.get_parent()) return;
         this._populateVideoCodecs();
-        panel.insert_child_at_index(this._videoContainer, 0);
+        this._ui.add_child(this._videoContainer);
+
+        // Center above the native panel on the primary monitor
+        const panel = this._ui._panel;
+        const monitor = global.display.get_primary_monitor();
+        const monRect = global.display.get_monitor_geometry(monitor);
+        const cw = this._videoContainer.get_preferred_width(-1)[1] || 300;
+        const ch = this._videoContainer.get_preferred_height(-1)[1] || 80;
+
+        let cy = monRect.y + monRect.height - ch - 24; // near bottom
+        if (panel && panel.visible) {
+            const [, py] = panel.get_transformed_position();
+            cy = py - ch - 12;
+        }
+        this._videoContainer.set_position(
+            monRect.x + (monRect.width - cw) / 2,
+            cy,
+        );
+
+        // Fade-in
+        this._videoContainer.opacity = 0;
+        this._videoContainer.ease({
+            opacity: 230,
+            duration: 200,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
     }
 
     /** Remove video settings from the native panel. */
@@ -1045,12 +1219,39 @@ export class PartToolbar extends PartUI {
     // Video settings getters
     get videoQuality() { return this._videoQuality; }
     get selectedPipelineId() { return this._selectedPipelineId; }
+    get webcamMaskId() { return this._selectedMaskId; }
 
     _onQualityClicked(qualityId) {
         this._videoQuality = qualityId;
         for (const [id, btn] of this._qualityButtons) {
             btn.checked = (id === qualityId);
         }
+    }
+
+    _onMaskClicked(maskId) {
+        this._selectedMaskId = maskId;
+        for (const [id, btn] of this._maskButtons) {
+            btn.checked = (id === maskId);
+        }
+        this._maskChangedCallback?.(maskId);
+    }
+
+    /** Register callback for mask selection changes. */
+    onMaskChanged(callback) {
+        this._maskChangedCallback = callback;
+    }
+
+    _onSizeClicked(sizeId, width) {
+        this._selectedSizeId = sizeId;
+        for (const [id, btn] of this._sizeButtons) {
+            btn.checked = (id === sizeId);
+        }
+        this._sizeChangedCallback?.(width);
+    }
+
+    /** Register callback for webcam size changes. */
+    onSizeChanged(callback) {
+        this._sizeChangedCallback = callback;
     }
 
     _populateVideoCodecs() {
@@ -1107,7 +1308,7 @@ export class PartToolbar extends PartUI {
         }
     }
 
-    // Video settings panel is now embedded in _panel via _attachVideoToPanel().
+    // Video settings panel is now a floating modal, matching the edit toolbar behavior.
 
     _onUndo() { }
     _onRedo() { }
@@ -1173,6 +1374,7 @@ export class PartToolbar extends PartUI {
             style: 'background: rgba(0,0,0,0.85); color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 11px;',
         });
         this._ui.add_child(this._tooltip);
+        this._ui.set_child_above_sibling(this._tooltip, null);
 
         GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
             if (!this._tooltip) return GLib.SOURCE_REMOVE;

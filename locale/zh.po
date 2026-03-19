@@ -61,6 +61,12 @@ msgstr "渐变角度"
 msgid "Border Radius"
 msgstr "边框半径"
 #: NEEDS WORK
+msgid "Webcam"
+msgstr "网络摄像头"
+#: NEEDS WORK
+msgid "Webcam Overlay"
+msgstr "摄像头叠加"
+#: NEEDS WORK
 msgid "Frames per second"
 msgstr "每秒帧数"
 #: NEEDS WORK
@@ -151,6 +157,9 @@ msgstr "另存为…"
 msgid "Close"
 msgstr "关闭"
 #: NEEDS WORK
+msgid "Video Settings"
+msgstr "视频设置"
+#: NEEDS WORK
 msgid "Quality"
 msgstr "质量"
 #: NEEDS WORK
@@ -169,8 +178,35 @@ msgstr "录音质量（比特率）"
 msgid "Codec"
 msgstr "编解码器"
 #: NEEDS WORK
+msgid "Mask"
+msgstr "遮罩"
+#: NEEDS WORK
+msgid "None"
+msgstr "没有要翻译的字符串。"
+#: NEEDS WORK
+msgid "Circle"
+msgstr "圆圈"
+#: NEEDS WORK
+msgid "Soft"
+msgstr "软"
+#: NEEDS WORK
+msgid "Spot"
+msgstr "点位"
+#: NEEDS WORK
+msgid "Ornate"
+msgstr "华丽"
+#: NEEDS WORK
+msgid "Rings"
+msgstr "环"
+#: NEEDS WORK
+msgid "Size"
+msgstr "大小"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "编辑"
+#: NEEDS WORK
+msgid "Edit Screenshot"
+msgstr "编辑截图"
 #: NEEDS WORK
 msgid "Custom"
 msgstr "自定义"

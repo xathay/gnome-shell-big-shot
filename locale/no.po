@@ -61,6 +61,12 @@ msgstr "Gradientvinkel"
 msgid "Border Radius"
 msgstr "Hjørneradius"
 #: NEEDS WORK
+msgid "Webcam"
+msgstr "Webkamera"
+#: NEEDS WORK
+msgid "Webcam Overlay"
+msgstr "Webcam-overlay"
+#: NEEDS WORK
 msgid "Frames per second"
 msgstr "Bilder per sekund"
 #: NEEDS WORK
@@ -151,6 +157,9 @@ msgstr "Lagre som…"
 msgid "Close"
 msgstr "Lukk"
 #: NEEDS WORK
+msgid "Video Settings"
+msgstr "Videoinnstillinger"
+#: NEEDS WORK
 msgid "Quality"
 msgstr "Kvalitet"
 #: NEEDS WORK
@@ -169,8 +178,35 @@ msgstr "Opptaks kvalitet (bitrate)"
 msgid "Codec"
 msgstr "Kodek"
 #: NEEDS WORK
+msgid "Mask"
+msgstr "Maske"
+#: NEEDS WORK
+msgid "None"
+msgstr "Ingen tekst å oversette."
+#: NEEDS WORK
+msgid "Circle"
+msgstr "Sirkel"
+#: NEEDS WORK
+msgid "Soft"
+msgstr "Myk"
+#: NEEDS WORK
+msgid "Spot"
+msgstr "Flekk"
+#: NEEDS WORK
+msgid "Ornate"
+msgstr "Utsmykket"
+#: NEEDS WORK
+msgid "Rings"
+msgstr "Ringer"
+#: NEEDS WORK
+msgid "Size"
+msgstr "Størrelse"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Rediger"
+#: NEEDS WORK
+msgid "Edit Screenshot"
+msgstr "Rediger skjermbilde"
 #: NEEDS WORK
 msgid "Custom"
 msgstr "Egendefinert"

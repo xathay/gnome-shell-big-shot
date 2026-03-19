@@ -5,6 +5,10 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+/* Ensure all type buttons have consistent minimum width */
+.screenshot-ui-type-button {
+    min-width: 50px;
+}
 /* ===== Edit Container (single row inside native panel) ===== */
 .big-shot-edit-container {
     spacing: 4px;
@@ -125,4 +129,18 @@
     margin: 0;
     padding: 0;
     /* transition: opacity 200ms ease-out; */
+}
+
+/* ===== Recording pause indicator ===== */
+.big-shot-paused-icon {
+    color: #f9c440;
+}
+
+.big-shot-paused-timer {
+    color: #f9c440;
+}
+/* ===== Webcam overlay ===== */
+.big-shot-webcam-container {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }

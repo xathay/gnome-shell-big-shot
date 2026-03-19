@@ -61,6 +61,12 @@ msgstr "Γωνία Γρανάζιου"
 msgid "Border Radius"
 msgstr "Ακτίνα Περιγράμματος"
 #: NEEDS WORK
+msgid "Webcam"
+msgstr "Κάμερα web"
+#: NEEDS WORK
+msgid "Webcam Overlay"
+msgstr "Επικάλυψη Webcam"
+#: NEEDS WORK
 msgid "Frames per second"
 msgstr "Καρέ ανά δευτερόλεπτο"
 #: NEEDS WORK
@@ -107,7 +113,7 @@ msgid "Number with Pointer"
 msgstr "Αριθμός με Δείκτη"
 #: NEEDS WORK
 msgid "Eraser"
-msgstr "Σβηστήρας"
+msgstr "Γόμα"
 #: NEEDS WORK
 msgid "Show screenshot panel"
 msgstr "Εμφάνιση πίνακα στιγμιότυπου οθόνης"
@@ -151,6 +157,9 @@ msgstr "Αποθήκευση ως…"
 msgid "Close"
 msgstr "Κλείσιμο"
 #: NEEDS WORK
+msgid "Video Settings"
+msgstr "Ρυθμίσεις Βίντεο"
+#: NEEDS WORK
 msgid "Quality"
 msgstr "Ποιότητα"
 #: NEEDS WORK
@@ -169,8 +178,35 @@ msgstr "Ποιότητα εγγραφής (bitrate)"
 msgid "Codec"
 msgstr "Κωδικοποιητής"
 #: NEEDS WORK
+msgid "Mask"
+msgstr "Μάσκα"
+#: NEEDS WORK
+msgid "None"
+msgstr "None"
+#: NEEDS WORK
+msgid "Circle"
+msgstr "Κύκλος"
+#: NEEDS WORK
+msgid "Soft"
+msgstr "Λογισμικό"
+#: NEEDS WORK
+msgid "Spot"
+msgstr "Σημείο"
+#: NEEDS WORK
+msgid "Ornate"
+msgstr "Διακοσμητικός"
+#: NEEDS WORK
+msgid "Rings"
+msgstr "Δαχτυλίδια"
+#: NEEDS WORK
+msgid "Size"
+msgstr "Μέγεθος"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Επεξεργασία"
+#: NEEDS WORK
+msgid "Edit Screenshot"
+msgstr "Επεξεργασία Στιγμιότυπου Οθόνης"
 #: NEEDS WORK
 msgid "Custom"
 msgstr "Προσαρμοσμένο"

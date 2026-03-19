@@ -61,6 +61,12 @@ msgstr "Gradientvinkel"
 msgid "Border Radius"
 msgstr "Gränsradie"
 #: NEEDS WORK
+msgid "Webcam"
+msgstr "Webbkamera"
+#: NEEDS WORK
+msgid "Webcam Overlay"
+msgstr "Webbkamerafilter"
+#: NEEDS WORK
 msgid "Frames per second"
 msgstr "Ramar per sekund"
 #: NEEDS WORK
@@ -107,7 +113,7 @@ msgid "Number with Pointer"
 msgstr "Nummer med pekare"
 #: NEEDS WORK
 msgid "Eraser"
-msgstr "Suddgummi"
+msgstr "Sudden"
 #: NEEDS WORK
 msgid "Show screenshot panel"
 msgstr "Visa skärmdumpspanel"
@@ -151,6 +157,9 @@ msgstr "Spara som…"
 msgid "Close"
 msgstr "Stäng"
 #: NEEDS WORK
+msgid "Video Settings"
+msgstr "Videoinställningar"
+#: NEEDS WORK
 msgid "Quality"
 msgstr "Kvalitet"
 #: NEEDS WORK
@@ -169,8 +178,35 @@ msgstr "Inspelningskvalitet (bitrate)"
 msgid "Codec"
 msgstr "Kodek"
 #: NEEDS WORK
+msgid "Mask"
+msgstr "Maskera"
+#: NEEDS WORK
+msgid "None"
+msgstr "Inga strängar att översätta."
+#: NEEDS WORK
+msgid "Circle"
+msgstr "Cirkel"
+#: NEEDS WORK
+msgid "Soft"
+msgstr "Mjukvara"
+#: NEEDS WORK
+msgid "Spot"
+msgstr "Fläck"
+#: NEEDS WORK
+msgid "Ornate"
+msgstr "Utsmyckad"
+#: NEEDS WORK
+msgid "Rings"
+msgstr "Ringar"
+#: NEEDS WORK
+msgid "Size"
+msgstr "Storlek"
+#: NEEDS WORK
 msgid "Edit"
 msgstr "Redigera"
+#: NEEDS WORK
+msgid "Edit Screenshot"
+msgstr "Redigera skärmdump"
 #: NEEDS WORK
 msgid "Custom"
 msgstr "Anpassad"
