@@ -237,7 +237,7 @@ msgstr "Høy"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:567
 msgid "Medium"
-msgstr "Medium"
+msgstr "Middels"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:568
 msgid "Low"
@@ -297,7 +297,7 @@ msgstr "Ingen fyll"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1277
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automatisk"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1281
 msgid "Use best available codec"
@@ -311,3 +311,8 @@ msgstr "Videokodek"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Kamera"
+
+msgid "Neon"
+msgstr "Neon"

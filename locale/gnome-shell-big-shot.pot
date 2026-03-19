@@ -311,3 +311,9 @@ msgstr ""
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/partwebcam.js:113
 msgid "Webcam Overlay"
 msgstr ""
+
+msgid "Camera"
+msgstr ""
+
+msgid "Neon"
+msgstr ""

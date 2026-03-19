@@ -40,6 +40,7 @@ const BUILTIN_MASKS = [
     { id: 'spotlight',        label: 'Spot' },
     { id: 'ornate-frame',     label: 'Ornate' },
     { id: 'checker',           label: 'Checker' },
+    { id: 'neon',              label: 'Neon' },
 ];
 
 export class PartWebcam extends PartUI {
@@ -149,6 +150,48 @@ export class PartWebcam extends PartUI {
 
     get masks() { return BUILTIN_MASKS; }
     get available() { return Gst !== null; }
+
+    get selectedDevice() { return this._selectedDevice ?? null; }
+    set selectedDevice(val) {
+        if (this._selectedDevice === val)
+            return;
+        this._selectedDevice = val;
+        // Restart pipeline with new device if currently previewing
+        if (this._enabled && this._pipeline && !this._probing) {
+            this._stopPipeline();
+            this._startPipeline();
+        }
+    }
+
+    /** Enumerate available webcam devices with human-readable names.
+     *  Filters out duplicate V4L2 nodes (metadata/secondary) by keeping
+     *  only the first device per unique name (typically the capture node).
+     *  Returns [{device: '/dev/video0', name: 'USB Camera', index: 0}, ...] */
+    enumerateDevices() {
+        const seen = new Set();
+        const cams = [];
+        for (let i = 0; i < 10; i++) {
+            const dev = `/dev/video${i}`;
+            if (!GLib.file_test(dev, GLib.FileTest.EXISTS))
+                continue;
+            // Read device name from sysfs
+            const nameFile = `/sys/class/video4linux/video${i}/name`;
+            let name = `Camera ${i}`;
+            try {
+                const [ok, contents] = GLib.file_get_contents(nameFile);
+                if (ok)
+                    name = new TextDecoder().decode(contents).trim();
+            } catch { /* ignore */ }
+
+            // Skip duplicate names (secondary V4L2 nodes for same camera)
+            if (seen.has(name))
+                continue;
+            seen.add(name);
+
+            cams.push({ device: dev, name, index: i });
+        }
+        return cams;
+    }
 
     // =========================================================================
     // Preview lifecycle
@@ -276,6 +319,9 @@ export class PartWebcam extends PartUI {
         });
         this._container.set_position(this._savedX, this._savedY);
         this._overlayParent = 'chrome';
+
+        // Reconnect drag capture to global.stage so dragging works during recording
+        this._connectDragCapture(global.stage);
     }
 
     /** Move the overlay back to the screenshotUI (for preview). */
@@ -288,6 +334,9 @@ export class PartWebcam extends PartUI {
         this._ui.add_child(this._container);
         this._container.set_position(this._savedX, this._savedY);
         this._overlayParent = 'ui';
+
+        // Reconnect drag capture back to screenshotUI
+        this._connectDragCapture(this._ui);
     }
 
     _destroyOverlay() {
@@ -341,6 +390,9 @@ export class PartWebcam extends PartUI {
             return;
         case 'checker':
             this._maskChecker(data, w, h);
+            return;
+        case 'neon':
+            this._maskNeon(data, w, h);
             return;
         }
     }
@@ -485,7 +537,7 @@ export class PartWebcam extends PartUI {
         const r = Math.min(w, h) / 2;
 
         // Border ring (normalised to radius)
-        const innerR = 0.91;
+        const innerR = 0.946;
         const outerR = 1.0;
         const aa = 0.012;
 
@@ -613,6 +665,77 @@ export class PartWebcam extends PartUI {
     // Drag handling
     // =========================================================================
 
+    /** Neon 80s — glowing neon ring with magenta/pink glow around a circle. */
+    _maskNeon(data, w, h) {
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = Math.min(w, h) / 2;
+
+        // Ring geometry (normalised to radius)
+        const ringCenter = 0.88;
+        const ringHalf = 0.012;       // ring half-thickness
+        const ringInner = ringCenter - ringHalf;
+        const ringOuter = ringCenter + ringHalf;
+
+        // Glow zones
+        const innerGlowStart = 0.72;  // inner glow begins beyond this
+        const outerGlowEnd = 1.0;     // outer glow fades to zero here
+
+        // Neon colours
+        const nR = 255, nG = 50, nB = 255;   // hot magenta for the ring
+        const gR = 180, gG = 0,  gB = 220;   // purple for the glow
+
+        for (let y = 0; y < h; y++) {
+            const dy = (y - cy) / r;
+            const dy2 = dy * dy;
+
+            for (let x = 0; x < w; x++) {
+                const dx = (x - cx) / r;
+                const d2 = dx * dx + dy2;
+                const d = Math.sqrt(d2);
+                const idx = (y * w + x) * 4;
+
+                if (d > outerGlowEnd) {
+                    // Outside glow — fully transparent
+                    data[idx + 3] = 0;
+                } else if (d > ringOuter) {
+                    // Outer glow zone: neon colour with fading alpha
+                    const t = (d - ringOuter) / (outerGlowEnd - ringOuter);
+                    const glowAlpha = Math.round(180 * Math.pow(1 - t, 2.5));
+                    data[idx]     = gR;
+                    data[idx + 1] = gG;
+                    data[idx + 2] = gB;
+                    data[idx + 3] = glowAlpha;
+                } else if (d >= ringInner) {
+                    // The neon ring itself — bright, near-white pink
+                    const dist = Math.abs(d - ringCenter) / ringHalf;
+                    // Core is white-hot, edges are magenta
+                    const white = Math.pow(Math.max(0, 1 - dist), 1.5);
+                    data[idx]     = Math.round(nR * (1 - white * 0.0) + 255 * white);
+                    data[idx + 1] = Math.round(nG * (1 - white) + 220 * white);
+                    data[idx + 2] = Math.round(nB * (1 - white * 0.0) + 255 * white);
+                    data[idx + 3] = 255;
+                } else if (d > innerGlowStart) {
+                    // Inner glow zone: blend webcam with soft glow
+                    const t = (d - innerGlowStart) / (ringInner - innerGlowStart);
+                    const glowIntensity = Math.pow(t, 2.0) * 0.55;
+                    data[idx]     = Math.round(data[idx]     * (1 - glowIntensity) + gR * glowIntensity);
+                    data[idx + 1] = Math.round(data[idx + 1] * (1 - glowIntensity) + gG * glowIntensity);
+                    data[idx + 2] = Math.round(data[idx + 2] * (1 - glowIntensity) + gB * glowIntensity);
+                    // Alpha stays as-is (webcam content)
+                } else if (d > innerGlowStart - 0.02) {
+                    // Soft anti-alias transition
+                    const t = (d - (innerGlowStart - 0.02)) / 0.02;
+                    const vignette = t * 0.05;
+                    data[idx]     = Math.round(data[idx]     * (1 - vignette) + gR * vignette);
+                    data[idx + 1] = Math.round(data[idx + 1] * (1 - vignette) + gG * vignette);
+                    data[idx + 2] = Math.round(data[idx + 2] * (1 - vignette) + gB * vignette);
+                }
+                // else: pure webcam pixels unchanged
+            }
+        }
+    }
+
     /** Check if stage coordinates are within the container's bounds. */
     _hitTestContainer(stageX, stageY) {
         if (!this._container)
@@ -626,52 +749,77 @@ export class PartWebcam extends PartUI {
         if (!this._container)
             return;
 
-        // Press: detect on the container itself (reactive St.Widget)
-        this._container.connect('button-press-event', (_actor, event) => {
+        // All drag events (press, motion, release) are handled via
+        // captured-event on the parent scope. This avoids relying on
+        // button-press-event delivery to the container, which can fail
+        // when the overlay is reparented to TopChrome during recording.
+        this._connectDragCapture(this._ui);
+    }
+
+    /** Handler for all drag events via captured-event on the parent scope.
+     *  Uses manual hit-testing so drag works in both screenshotUI and
+     *  TopChrome (recording) contexts. */
+    _onDragCapturedEvent(_actor, event) {
+        const type = event.type();
+
+        // Start drag on button press if click is on the webcam container
+        if (type === Clutter.EventType.BUTTON_PRESS) {
             if (event.get_button() !== Clutter.BUTTON_PRIMARY)
                 return Clutter.EVENT_PROPAGATE;
 
             const [mx, my] = event.get_coords();
-            this._dragging = true;
-            this._dragOffsetX = this._container.x - mx;
-            this._dragOffsetY = this._container.y - my;
-            return Clutter.EVENT_STOP;
-        });
-
-        // Motion & release: listen on screenshotUI via captured-event
-        // so drag continues even if the pointer leaves the container.
-        this._dragCapturedId = this._ui.connect('captured-event', (_actor, event) => {
-            if (!this._dragging)
-                return Clutter.EVENT_PROPAGATE;
-
-            const type = event.type();
-
-            if (type === Clutter.EventType.MOTION) {
-                const [mx, my] = event.get_coords();
-                this._container.set_position(
-                    mx + this._dragOffsetX,
-                    my + this._dragOffsetY
-                );
+            const hit = this._hitTestContainer(mx, my);
+            if (hit) {
+                this._dragging = true;
+                this._dragOffsetX = this._container.x - mx;
+                this._dragOffsetY = this._container.y - my;
                 return Clutter.EVENT_STOP;
             }
-
-            if (type === Clutter.EventType.BUTTON_RELEASE) {
-                this._dragging = false;
-                this._savedX = this._container.x;
-                this._savedY = this._container.y;
-                return Clutter.EVENT_STOP;
-            }
-
             return Clutter.EVENT_PROPAGATE;
-        });
+        }
+
+        if (!this._dragging)
+            return Clutter.EVENT_PROPAGATE;
+
+        if (type === Clutter.EventType.MOTION) {
+            const [mx, my] = event.get_coords();
+            this._container.set_position(
+                mx + this._dragOffsetX,
+                my + this._dragOffsetY
+            );
+            return Clutter.EVENT_STOP;
+        }
+
+        if (type === Clutter.EventType.BUTTON_RELEASE) {
+            this._dragging = false;
+            this._savedX = this._container.x;
+            this._savedY = this._container.y;
+            return Clutter.EVENT_STOP;
+        }
+
+        return Clutter.EVENT_PROPAGATE;
+    }
+
+    /** Connect drag capture to a given actor (screenshotUI or global.stage). */
+    _connectDragCapture(actor) {
+        this._disconnectDragCapture();
+        this._dragCaptureActor = actor;
+        this._dragCapturedId = actor.connect('captured-event',
+            this._onDragCapturedEvent.bind(this));
+    }
+
+    /** Disconnect the current drag capture listener. */
+    _disconnectDragCapture() {
+        if (this._dragCapturedId && this._dragCaptureActor) {
+            this._dragCaptureActor.disconnect(this._dragCapturedId);
+            this._dragCapturedId = 0;
+            this._dragCaptureActor = null;
+        }
     }
 
     _cleanupDrag() {
         this._dragging = false;
-        if (this._dragCapturedId) {
-            this._ui.disconnect(this._dragCapturedId);
-            this._dragCapturedId = 0;
-        }
+        this._disconnectDragCapture();
     }
 
     // =========================================================================
@@ -755,14 +903,25 @@ export class PartWebcam extends PartUI {
             // Already initialized
         }
 
-        // Try each /dev/video* device, validating capture capability
-        const devices = this._findWebcamDevices();
         let started = false;
-        for (const device of devices) {
-            if (this._tryV4l2Device(device)) {
+
+        // If user selected a specific device, try only that one
+        if (this._selectedDevice) {
+            if (this._tryV4l2Device(this._selectedDevice)) {
                 started = true;
-                this._activeDevice = device;
-                break;
+                this._activeDevice = this._selectedDevice;
+            }
+        }
+
+        // Otherwise try each /dev/video* device, validating capture capability
+        if (!started) {
+            const devices = this._findWebcamDevices();
+            for (const device of devices) {
+                if (this._tryV4l2Device(device)) {
+                    started = true;
+                    this._activeDevice = device;
+                    break;
+                }
             }
         }
 

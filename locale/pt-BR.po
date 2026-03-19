@@ -334,3 +334,9 @@ msgstr "Sobreposição da Webcam"
 
 #~ msgid "Fill Color"
 #~ msgstr "Cor de Preenchimento"
+
+msgid "Camera"
+msgstr "Câmera"
+
+msgid "Neon"
+msgstr "Neon"

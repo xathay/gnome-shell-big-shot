@@ -253,7 +253,7 @@ msgstr "Codec"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:603
 msgid "Mask"
-msgstr "Masca"
+msgstr "Mască"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:612
 msgid "None"
@@ -297,7 +297,7 @@ msgstr "Fără umplere"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1277
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automat"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1281
 msgid "Use best available codec"
@@ -311,3 +311,8 @@ msgstr "Codec video"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Cameră"
+
+msgid "Neon"
+msgstr "Neon"

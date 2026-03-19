@@ -279,7 +279,7 @@ msgstr "Pas de remplissage"
 
 #: NEEDS WORK
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automatique"
 
 #: NEEDS WORK
 msgid "Use best available codec"
@@ -288,3 +288,12 @@ msgstr "Utiliser le meilleur codec disponible"
 #: NEEDS WORK
 msgid "Video codec"
 msgstr "Codec vidéo"
+
+msgid "Camera"
+msgstr "Caméra"
+
+msgid "Neon"
+msgstr "Neon"
+
+msgid "Checker"
+msgstr "Checker"

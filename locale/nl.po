@@ -23,7 +23,7 @@ msgstr "Screenshot genomen"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/extension.js:548
 msgid "Screenshots"
-msgstr "Screenshots"
+msgstr "Schermafbeeldingen"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/extension.js:558
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/extension.js:777
@@ -253,7 +253,7 @@ msgstr "Codec"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:603
 msgid "Mask"
-msgstr "Mask"
+msgstr "Masker"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:612
 msgid "None"
@@ -297,7 +297,7 @@ msgstr "Geen vulling"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1277
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automatisch"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1281
 msgid "Use best available codec"
@@ -311,3 +311,8 @@ msgstr "Videocodec"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Camera"
+
+msgid "Neon"
+msgstr "Neon"

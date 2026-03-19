@@ -311,3 +311,8 @@ msgstr "Códec de video"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Cámara"
+
+msgid "Neon"
+msgstr "Neon"

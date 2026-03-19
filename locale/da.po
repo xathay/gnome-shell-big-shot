@@ -83,7 +83,7 @@ msgstr "Border Radius"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/partwebcam.js:88
 msgid "Webcam"
-msgstr "Webcam"
+msgstr "Webkamera"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/partwebcam.js:113
 msgid "Webcam Overlay"
@@ -297,7 +297,7 @@ msgstr "Ingen fyldning"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1277
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automatisk"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1281
 msgid "Use best available codec"
@@ -311,3 +311,8 @@ msgstr "Video codec"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Kamera"
+
+msgid "Neon"
+msgstr "Neon"

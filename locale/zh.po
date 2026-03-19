@@ -311,3 +311,8 @@ msgstr "视频编码器"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "相机"
+
+msgid "Neon"
+msgstr "Neon"
