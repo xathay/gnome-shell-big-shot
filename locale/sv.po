@@ -237,7 +237,7 @@ msgstr "Hög"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:567
 msgid "Medium"
-msgstr "Medium"
+msgstr "Medel"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:568
 msgid "Low"
@@ -253,7 +253,7 @@ msgstr "Kodek"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:603
 msgid "Mask"
-msgstr "Maskera"
+msgstr "Mask"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:612
 msgid "None"
@@ -311,3 +311,8 @@ msgstr "Videokodare"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Kamera"
+
+msgid "Neon"
+msgstr "Neon"

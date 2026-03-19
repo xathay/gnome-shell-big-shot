@@ -297,7 +297,7 @@ msgstr "Nessun riempimento"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1277
 msgid "Auto"
-msgstr "Auto"
+msgstr "Automatico"
 
 #: /home/talesam/Servidor/GitHub/BigCommunity/gnome-shell-big-shot/usr/share/gnome-shell/extensions/big-shot@bigcommunity.org/parts/parttoolbar.js:1281
 msgid "Use best available codec"
@@ -311,3 +311,8 @@ msgstr "Codec video"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Fotocamera"
+
+msgid "Neon"
+msgstr "Neon"

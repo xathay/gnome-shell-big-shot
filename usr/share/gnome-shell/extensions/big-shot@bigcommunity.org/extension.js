@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '26.3.19';
+export const APP_VERSION = '26.4.0';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -973,12 +973,26 @@ export default class BigShotExtension extends Extension {
         this._webcam = new PartWebcam(ui, ext);
         this._parts.push(this._webcam);
 
-        // Wire webcam toggle (bottom bar button) to mask/size row visibility
+        // Wire webcam toggle (bottom bar button) to mask/size/camera row visibility
         this._webcam.onWebcamToggled((enabled) => {
             if (this._toolbar._maskRow)
                 this._toolbar._maskRow.visible = enabled;
             if (this._toolbar._sizeRow)
                 this._toolbar._sizeRow.visible = enabled;
+            if (this._toolbar._cameraRow && enabled) {
+                // Populate camera list when webcam is enabled
+                const devices = this._webcam.enumerateDevices();
+                this._toolbar.populateCameras(devices);
+            } else if (this._toolbar._cameraRow) {
+                this._toolbar._cameraRow.visible = false;
+            }
+            // Reposition video panel so it doesn't overlap the bottom bar
+            this._toolbar.repositionVideoPanel();
+        });
+
+        // Wire camera selection from toolbar
+        this._toolbar.onCameraChanged((device) => {
+            this._webcam.selectedDevice = device;
         });
 
         // Wire mask selection from toolbar
@@ -999,7 +1013,9 @@ export default class BigShotExtension extends Extension {
                 this._webcam.reparentForPreview();
                 this._webcam.startPreview();
             } else if (!ui.visible && this._recordingState === 'idle') {
-                this._webcam?.stopPreview();
+                // Reset webcam button to off so next open starts clean
+                if (this._webcam?._webcamButton)
+                    this._webcam._webcamButton.checked = false;
             } else if (!ui.visible && this._recordingState !== 'idle') {
                 // Recording started, UI hiding — move webcam to TopChrome
                 this._webcam?.reparentForRecording();

@@ -311,3 +311,8 @@ msgstr "Vöruvíddarkóðari"
 msgid "Checker"
 msgstr "Checker"
 
+msgid "Camera"
+msgstr "Myndavél"
+
+msgid "Neon"
+msgstr "Neon"
