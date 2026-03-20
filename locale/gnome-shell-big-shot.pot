@@ -176,25 +176,10 @@ msgstr  ""
 msgid   "Codec"
 msgstr  ""
 
+msgid   "Camera"
+msgstr  ""
+
 msgid   "Mask"
-msgstr  ""
-
-msgid   "None"
-msgstr  ""
-
-msgid   "Circle"
-msgstr  ""
-
-msgid   "Soft"
-msgstr  ""
-
-msgid   "Spot"
-msgstr  ""
-
-msgid   "Ornate"
-msgstr  ""
-
-msgid   "Rings"
 msgstr  ""
 
 msgid   "Size"

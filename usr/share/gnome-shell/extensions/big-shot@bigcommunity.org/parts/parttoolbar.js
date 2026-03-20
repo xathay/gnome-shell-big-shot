@@ -596,7 +596,21 @@ export class PartToolbar extends PartUI {
         this._videoContainer.add_child(codecBox);
         this._codecButtons = new Map();
 
-        // Row 3: Mask selection (visible only when webcam is on)
+        // Row 3: Camera selection (visible only when webcam is on)
+        this._cameraRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
+        this._cameraRow.visible = false;
+        this._cameraRow.add_child(new St.Label({
+            text: _('Camera'),
+            style: 'color: rgba(255,255,255,0.6); font-size: 12px; min-width: 50px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._cameraButtonsRow = new St.BoxLayout({ style: 'spacing: 4px;' });
+        this._cameraButtons = new Map();
+        this._selectedCameraDevice = null; // null = auto
+        this._cameraRow.add_child(this._cameraButtonsRow);
+        this._videoContainer.add_child(this._cameraRow);
+
+        // Row 4: Mask selection (visible only when webcam is on)
         this._maskRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
         this._maskRow.visible = false;
         this._maskRow.add_child(new St.Label({
@@ -609,13 +623,14 @@ export class PartToolbar extends PartUI {
         this._selectedMaskId = 'circle';
 
         const maskOptions = [
-            { id: 'none', label: _('None') },
-            { id: 'circle', label: _('Circle') },
-            { id: 'ellipse', label: _('Oval') },
-            { id: 'soft-circle', label: _('Soft') },
-            { id: 'spotlight', label: _('Spot') },
-            { id: 'ornate-frame', label: _('Ornate') },
-            { id: 'checker', label: _('Checker') },
+            { id: 'none', label: 'None' },
+            { id: 'circle', label: 'Circle' },
+            { id: 'ellipse', label: 'Oval' },
+            { id: 'soft-circle', label: 'Soft' },
+            { id: 'spotlight', label: 'Spot' },
+            { id: 'ornate-frame', label: 'Ornate' },
+            { id: 'checker', label: 'Checker' },
+            { id: 'neon', label: 'Neon' },
         ];
         for (const m of maskOptions) {
             const btn = new St.Button({
@@ -810,6 +825,33 @@ export class PartToolbar extends PartUI {
             opacity: 230,
             duration: 200,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+    }
+
+    /** Reposition video panel centered above the bottom bar after row changes. */
+    repositionVideoPanel() {
+        if (!this._videoContainer.get_parent()) return;
+
+        // Defer to next allocation so the container knows its new size
+        this._videoContainer.queue_relayout();
+        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            if (!this._videoContainer.get_parent()) return GLib.SOURCE_REMOVE;
+            const panel = this._ui._panel;
+            const monitor = global.display.get_primary_monitor();
+            const monRect = global.display.get_monitor_geometry(monitor);
+            const cw = this._videoContainer.get_preferred_width(-1)[1] || 300;
+            const ch = this._videoContainer.get_preferred_height(-1)[1] || 80;
+
+            let cy = monRect.y + monRect.height - ch - 24;
+            if (panel && panel.visible) {
+                const [, py] = panel.get_transformed_position();
+                cy = py - ch - 12;
+            }
+            this._videoContainer.set_position(
+                monRect.x + (monRect.width - cw) / 2,
+                cy,
+            );
+            return GLib.SOURCE_REMOVE;
         });
     }
 
@@ -1239,6 +1281,68 @@ export class PartToolbar extends PartUI {
     /** Register callback for mask selection changes. */
     onMaskChanged(callback) {
         this._maskChangedCallback = callback;
+    }
+
+    _onCameraClicked(device) {
+        this._selectedCameraDevice = device;
+        for (const [dev, btn] of this._cameraButtons) {
+            btn.checked = (dev === device);
+        }
+        this._cameraChangedCallback?.(device);
+    }
+
+    /** Register callback for camera selection changes. */
+    onCameraChanged(callback) {
+        this._cameraChangedCallback = callback;
+    }
+
+    /** Populate camera buttons from list of devices.
+     *  @param {Array<{device: string, name: string}>} devices */
+    populateCameras(devices) {
+        this._cameraButtonsRow.destroy_all_children();
+        this._cameraButtons.clear();
+
+        if (!devices || devices.length <= 1) {
+            // Hide row if 0 or 1 camera (no choice needed)
+            this._cameraRow.visible = false;
+            return;
+        }
+
+        // Show the row when there are multiple cameras
+        this._cameraRow.visible = true;
+
+        // Auto button
+        const autoBtn = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            toggle_mode: true,
+            can_focus: true,
+            label: _('Auto'),
+        });
+        autoBtn.checked = (this._selectedCameraDevice === null);
+        autoBtn.connect('clicked', () => this._onCameraClicked(null));
+        this._cameraButtonsRow.add_child(autoBtn);
+        this._cameraButtons.set(null, autoBtn);
+
+        for (const cam of devices) {
+            // Shorten name: take last meaningful part
+            let shortName = cam.name;
+            if (shortName.length > 20)
+                shortName = shortName.substring(0, 18) + '…';
+
+            const btn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                toggle_mode: true,
+                can_focus: true,
+                label: shortName,
+            });
+            btn.checked = (cam.device === this._selectedCameraDevice);
+            const dev = cam.device;
+            btn.connect('clicked', () => this._onCameraClicked(dev));
+            btn.connect('enter-event', () => this._showTooltip(btn, cam.name));
+            btn.connect('leave-event', () => this._hideTooltip());
+            this._cameraButtonsRow.add_child(btn);
+            this._cameraButtons.set(cam.device, btn);
+        }
     }
 
     _onSizeClicked(sizeId, width) {

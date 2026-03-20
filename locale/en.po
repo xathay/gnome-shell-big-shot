@@ -177,26 +177,11 @@ msgstr "Recording quality (bitrate)"
 msgid "Codec"
 msgstr "Codec"
 
+msgid "Camera"
+msgstr "Camera"
+
 msgid "Mask"
 msgstr "Mask"
-
-msgid "None"
-msgstr "None"
-
-msgid "Circle"
-msgstr "Circle"
-
-msgid "Soft"
-msgstr "Soft"
-
-msgid "Spot"
-msgstr "Spot"
-
-msgid "Ornate"
-msgstr "Ornate"
-
-msgid "Rings"
-msgstr "Rings"
 
 msgid "Size"
 msgstr "Size"
