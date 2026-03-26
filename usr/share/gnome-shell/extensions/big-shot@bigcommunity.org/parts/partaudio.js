@@ -72,6 +72,7 @@ export class PartAudio extends PartUI {
 
         this._desktopDevice = null;
         this._micDevice = null;
+        this._selectedMicId = null; // null = use default source
         this._iconsDir = extension.dir.get_child('data').get_child('icons');
 
         // Initialize audio mixer
@@ -116,6 +117,11 @@ export class PartAudio extends PartUI {
 
         typeContainer.add_child(this._desktopButton);
         typeContainer.add_child(this._micButton);
+
+        // Notify toolbar when mic is toggled so it can show/hide mic selector
+        this._micButton.connect('clicked', () => {
+            this._micToggledCallback?.(this._micButton.checked);
+        });
 
         // Add tooltips
         this._desktopTooltip = new Screenshot.Tooltip(this._desktopButton, {
@@ -164,11 +170,51 @@ export class PartAudio extends PartUI {
         }
     }
 
+    /** Set the selected microphone id (from toolbar). null = default. */
+    set selectedMicId(id) {
+        this._selectedMicId = id;
+    }
+
+    /** Register callback for when the mic button is toggled. */
+    onMicToggled(callback) {
+        this._micToggledCallback = callback;
+    }
+
+    /** Enumerate all available microphone sources (excluding monitors).
+     *  @returns {Array<{id: number, name: string}>} */
+    enumerateMicrophones() {
+        const sources = this._mixer.get_sources();
+        const mics = [];
+        for (const src of sources) {
+            const name = src.get_name() || '';
+            // Skip monitor sources (desktop audio loopback)
+            if (name.endsWith('.monitor'))
+                continue;
+            mics.push({
+                id: src.get_id(),
+                name: src.get_description() || name,
+                pulseDevice: name,
+            });
+        }
+        return mics;
+    }
+
+    /** Resolve the mic device to use: selected or default. */
+    _resolveMicDevice() {
+        if (this._selectedMicId !== null) {
+            const stream = this._mixer.lookup_stream_id(this._selectedMicId);
+            if (stream)
+                return stream.get_name();
+        }
+        return this._micDevice; // default source
+    }
+
     makeAudioInput() {
         this._updateDevices();
 
+        const micDeviceName = this._resolveMicDevice();
         const desktopActive = this._desktopButton?.checked && this._desktopDevice;
-        const micActive = this._micButton?.checked && this._micDevice;
+        const micActive = this._micButton?.checked && micDeviceName;
 
         console.log(`[Big Shot Audio] desktopBtn=${this._desktopButton?.checked}, micBtn=${this._micButton?.checked}, dDev=${this._desktopDevice}, mDev=${this._micDevice}`);
 
@@ -195,18 +241,27 @@ export class PartAudio extends PartUI {
             ].join(' ! ');
         }
 
-        // Microphone source
+        // Microphone source (uses selected or default)
         let micSource = null;
         if (micActive) {
-            const src = this._mixer.get_default_source();
             let micChannels = 2;
-            if (src) {
-                const channelMap = src.get_channel_map();
-                if (channelMap)
-                    micChannels = channelMap.get_num_channels();
+            if (this._selectedMicId !== null) {
+                const stream = this._mixer.lookup_stream_id(this._selectedMicId);
+                if (stream) {
+                    const channelMap = stream.get_channel_map();
+                    if (channelMap)
+                        micChannels = channelMap.get_num_channels();
+                }
+            } else {
+                const src = this._mixer.get_default_source();
+                if (src) {
+                    const channelMap = src.get_channel_map();
+                    if (channelMap)
+                        micChannels = channelMap.get_num_channels();
+                }
             }
             micSource = [
-                `pulsesrc device=${this._micDevice} provide-clock=false`,
+                `pulsesrc device=${micDeviceName} provide-clock=false`,
                 `capsfilter caps=audio/x-raw,channels=${micChannels}`,
                 'audioconvert',
                 'queue',
@@ -239,6 +294,8 @@ export class PartAudio extends PartUI {
         if (this._micButton) {
             this._micButton.visible = isCast;
             this._micButton.reactive = isCast;
+            if (!isCast)
+                this._micToggledCallback?.(false);
         }
     }
 

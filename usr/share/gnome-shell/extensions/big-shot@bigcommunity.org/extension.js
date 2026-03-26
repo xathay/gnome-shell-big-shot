@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-export const APP_VERSION = '26.4.0';
+export const APP_VERSION = '26.5.0';
 
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
@@ -74,15 +74,29 @@ function detectGpuVendors() {
 // =============================================================================
 
 /**
+ * Quality presets aligned with big-video-converter defaults.
+ * QP values follow the same scale: lower = higher quality, larger files.
+ *
+ * big-video-converter mapping:
+ *   veryhigh → qp 18 / crf 18    (used here for 'high')
+ *   medium   → qp 24 / crf 24    (used here for 'medium')
+ *   low      → qp 27 / crf 27    (used here for 'low')
+ */
+const QUALITY_PRESETS = Object.freeze({
+    high: { qp: 18, qp_i: 18, qp_p: 20, qp_b: 22, openh264_br: 8000000, vp9_cq: 13, vp9_minq: 10, vp9_maxq: 50 },
+    medium: { qp: 24, qp_i: 24, qp_p: 26, qp_b: 28, openh264_br: 4000000, vp9_cq: 24, vp9_minq: 15, vp9_maxq: 55 },
+    low: { qp: 27, qp_i: 27, qp_p: 29, qp_b: 31, openh264_br: 2000000, vp9_cq: 31, vp9_minq: 20, vp9_maxq: 58 },
+});
+
+/**
  * Pipeline configs grouped by GPU vendor.
  * Each config has:
  *   label    — Human-readable name
  *   src      — Input capsfilter (FRAMERATE_CAPS replaced at runtime)
- *   enc      — Encoder chain
+ *   enc      — Function(preset) returning encoder chain string
  *   elements — Required GStreamer elements to check
  *   ext      — Output container extension (mp4/webm)
  *   vendors  — Array of GPU vendors this config works on
- *   lowpower — Optional, use low-power VAAPI mode
  */
 const VIDEO_PIPELINES = [
     // ── NVIDIA (NVENC with raw input — works with GNOME Screencast service) ──
@@ -91,7 +105,7 @@ const VIDEO_PIPELINES = [
         label: 'NVIDIA H.264',
         vendors: [GpuVendor.NVIDIA],
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'nvh264enc rc-mode=cbr-hq bitrate=40000 ! h264parse',
+        enc: (p) => `nvh264enc rc-mode=cqp qp-const=${p.qp} ! h264parse`,
         elements: ['videoconvert', 'nvh264enc'],
         ext: 'mp4',
     },
@@ -101,7 +115,7 @@ const VIDEO_PIPELINES = [
         label: 'VA H.264 Low-Power',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'vah264lpenc rate-control=cbr bitrate=40000 ! h264parse',
+        enc: (p) => `vah264lpenc rate-control=cqp qpi=${p.qp_i} qpp=${p.qp_p} qpb=${p.qp_b} ! h264parse`,
         elements: ['videoconvert', 'vah264lpenc'],
         ext: 'mp4',
     },
@@ -110,7 +124,7 @@ const VIDEO_PIPELINES = [
         label: 'VA H.264',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'vah264enc rate-control=cbr bitrate=40000 ! h264parse',
+        enc: (p) => `vah264enc rate-control=cqp qpi=${p.qp_i} qpp=${p.qp_p} qpb=${p.qp_b} ! h264parse`,
         elements: ['videoconvert', 'vah264enc'],
         ext: 'mp4',
     },
@@ -120,7 +134,7 @@ const VIDEO_PIPELINES = [
         label: 'VAAPI H.264',
         vendors: [GpuVendor.AMD, GpuVendor.INTEL],
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'vaapih264enc rate-control=cbr bitrate=40000 ! h264parse',
+        enc: (p) => `vaapih264enc rate-control=cqp init-qp=${p.qp} ! h264parse`,
         elements: ['videoconvert', 'vaapih264enc'],
         ext: 'mp4',
     },
@@ -135,7 +149,7 @@ const VIDEO_PIPELINES = [
         // capsfilter caps=video/x-raw,max-framerate=F/1 for custom pipelines.
         // Adding a second capsfilter causes FATAL_ERRORS linking failure.
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'openh264enc complexity=high bitrate=40000000 multi-thread=4 ! h264parse',
+        enc: (p) => `openh264enc complexity=high bitrate=${p.openh264_br} multi-thread=4 ! h264parse`,
         elements: ['videoconvert', 'openh264enc'],
         ext: 'mp4',
     },
@@ -144,7 +158,7 @@ const VIDEO_PIPELINES = [
         label: 'Software VP9',
         vendors: [],
         src: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=4 ! queue',
-        enc: 'vp9enc min_quantizer=10 max_quantizer=50 cq_level=13 cpu-used=5 threads=4 deadline=1 static-threshold=1000 buffer-size=20000 row-mt=1 ! queue',
+        enc: (p) => `vp9enc min_quantizer=${p.vp9_minq} max_quantizer=${p.vp9_maxq} cq_level=${p.vp9_cq} cpu-used=5 threads=4 deadline=1 static-threshold=1000 buffer-size=20000 row-mt=1 ! queue`,
         elements: ['videoconvert', 'vp9enc'],
         ext: 'webm',
     },
@@ -995,6 +1009,22 @@ export default class BigShotExtension extends Extension {
             this._webcam.selectedDevice = device;
         });
 
+        // Wire mic toggle → populate microphone selector in toolbar
+        this._audio.onMicToggled((enabled) => {
+            if (enabled) {
+                const mics = this._audio.enumerateMicrophones();
+                this._toolbar.populateMicrophones(mics);
+            } else {
+                this._toolbar.populateMicrophones([]);
+            }
+            this._toolbar.repositionVideoPanel();
+        });
+
+        // Wire mic selection from toolbar
+        this._toolbar.onMicChanged((micId) => {
+            this._audio.selectedMicId = micId;
+        });
+
         // Wire mask selection from toolbar
         this._toolbar.onMaskChanged((maskId) => {
             this._webcam.maskId = maskId;
@@ -1382,26 +1412,10 @@ export default class BigShotExtension extends Extension {
 
     _makePipelineString(config, framerateCaps, downsize, quality = 'high') {
         let video = config.src.replace('FRAMERATE_CAPS', framerateCaps);
-        video += ` ! ${config.enc}`;
 
-        // Apply quality adjustment to bitrate
-        if (quality !== 'high') {
-            const factor = quality === 'medium' ? 0.5 : 0.25;
-            // HW encoders use bitrate in kbps (e.g., bitrate=40000)
-            // SW encoders use bitrate in bps (e.g., bitrate=40000000)
-            video = video.replace(/bitrate=(\d+)/g, (_match, val) => {
-                return `bitrate=${Math.round(parseInt(val) * factor)}`;
-            });
-            // VP8/VP9 use quantizer-based quality (higher = lower quality)
-            video = video.replace(/min_quantizer=(\d+)/g, (_match, val) => {
-                const adj = quality === 'medium' ? 5 : 10;
-                return `min_quantizer=${Math.min(parseInt(val) + adj, 63)}`;
-            });
-            video = video.replace(/max_quantizer=(\d+)/g, (_match, val) => {
-                const adj = quality === 'medium' ? 3 : 8;
-                return `max_quantizer=${Math.min(parseInt(val) + adj, 63)}`;
-            });
-        }
+        // Resolve quality preset and build encoder string
+        const preset = QUALITY_PRESETS[quality] ?? QUALITY_PRESETS.high;
+        video += ` ! ${config.enc(preset)}`;
 
         // Downsize — insert videoscale between videoconvert and encoder
         if (downsize < 1.0) {

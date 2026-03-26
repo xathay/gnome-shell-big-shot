@@ -596,7 +596,21 @@ export class PartToolbar extends PartUI {
         this._videoContainer.add_child(codecBox);
         this._codecButtons = new Map();
 
-        // Row 3: Camera selection (visible only when webcam is on)
+        // Row 3: Microphone selection (visible when >1 mic available and mic is active)
+        this._micRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
+        this._micRow.visible = false;
+        this._micRow.add_child(new St.Label({
+            text: _('Mic'),
+            style: 'color: rgba(255,255,255,0.6); font-size: 12px; min-width: 50px;',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._micButtonsRow = new St.BoxLayout({ style: 'spacing: 4px;' });
+        this._micSelButtons = new Map();
+        this._selectedMicDevice = null; // null = default
+        this._micRow.add_child(this._micButtonsRow);
+        this._videoContainer.add_child(this._micRow);
+
+        // Row 4: Camera selection (visible only when webcam is on)
         this._cameraRow = new St.BoxLayout({ vertical: false, style: 'spacing: 8px;' });
         this._cameraRow.visible = false;
         this._cameraRow.add_child(new St.Label({
@@ -1343,6 +1357,72 @@ export class PartToolbar extends PartUI {
             this._cameraButtonsRow.add_child(btn);
             this._cameraButtons.set(cam.device, btn);
         }
+    }
+
+    // ── Microphone selection ──────────────────────────────────────
+    _onMicClicked(device) {
+        this._selectedMicDevice = device;
+        for (const [dev, btn] of this._micSelButtons) {
+            btn.checked = (dev === device);
+        }
+        this._micChangedCallback?.(device);
+    }
+
+    /** Register callback for microphone selection changes. */
+    onMicChanged(callback) {
+        this._micChangedCallback = callback;
+    }
+
+    /** Populate microphone buttons from list of devices.
+     *  @param {Array<{id: number, name: string}>} devices */
+    populateMicrophones(devices) {
+        this._micButtonsRow.destroy_all_children();
+        this._micSelButtons.clear();
+
+        if (!devices || devices.length <= 1) {
+            this._micRow.visible = false;
+            this._selectedMicDevice = null;
+            return;
+        }
+
+        this._micRow.visible = true;
+
+        // Auto button (uses default source)
+        const autoBtn = new St.Button({
+            style_class: 'screenshot-ui-show-pointer-button',
+            toggle_mode: true,
+            can_focus: true,
+            label: _('Auto'),
+        });
+        autoBtn.checked = (this._selectedMicDevice === null);
+        autoBtn.connect('clicked', () => this._onMicClicked(null));
+        this._micButtonsRow.add_child(autoBtn);
+        this._micSelButtons.set(null, autoBtn);
+
+        for (const mic of devices) {
+            let shortName = mic.name;
+            if (shortName.length > 20)
+                shortName = shortName.substring(0, 18) + '…';
+
+            const btn = new St.Button({
+                style_class: 'screenshot-ui-show-pointer-button',
+                toggle_mode: true,
+                can_focus: true,
+                label: shortName,
+            });
+            btn.checked = (mic.id === this._selectedMicDevice);
+            const id = mic.id;
+            btn.connect('clicked', () => this._onMicClicked(id));
+            btn.connect('enter-event', () => this._showTooltip(btn, mic.name));
+            btn.connect('leave-event', () => this._hideTooltip());
+            this._micButtonsRow.add_child(btn);
+            this._micSelButtons.set(mic.id, btn);
+        }
+    }
+
+    /** @returns {number|null} selected mic device id or null for default */
+    get selectedMicDevice() {
+        return this._selectedMicDevice;
     }
 
     _onSizeClicked(sizeId, width) {
