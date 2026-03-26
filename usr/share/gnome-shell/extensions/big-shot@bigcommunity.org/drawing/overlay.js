@@ -21,6 +21,7 @@ import {
     CensorAction,
     BlurAction,
     TextAction,
+    NumberStampAction,
     NumberArrowAction,
     NumberPointerAction,
 } from './actions.js';
@@ -51,11 +52,8 @@ export class DrawingOverlay {
         this._currentStroke = null;
         this._startPoint = null;
         this._isDrawing = false;
-        this._numberCounters = {
-            'number': 1,
-            'number-arrow': 1,
-            'number-pointer': 1,
-        };
+        // Number counters are computed dynamically from this._actions
+        // See _getNextNumber()
 
         // Selection / move state
         this._selectedAction = null;
@@ -65,8 +63,13 @@ export class DrawingOverlay {
         this._buildOverlay();
     }
 
-    _getNextNumber(toolId) {
-        return this._numberCounters[toolId]++;
+    _getNextNumber(actionClass) {
+        let count = 0;
+        for (const action of this._actions) {
+            if (action instanceof actionClass)
+                count++;
+        }
+        return count + 1;
     }
 
     _buildOverlay() {
@@ -369,7 +372,7 @@ export class DrawingOverlay {
             case DrawingMode.NUMBER:
                 action = createAction(DrawingMode.NUMBER, {
                     position: this._startPoint,
-                    number: this._getNextNumber('number'),
+                    number: this._getNextNumber(NumberStampAction),
                 }, options);
                 break;
             case DrawingMode.NUMBER_ARROW: {
@@ -379,7 +382,7 @@ export class DrawingOverlay {
                     action = createAction(DrawingMode.NUMBER_ARROW, {
                         start: this._startPoint,
                         end: [ix, iy],
-                        number: this._getNextNumber('number-arrow'),
+                        number: this._getNextNumber(NumberArrowAction),
                     }, options);
                 }
                 break;
@@ -391,7 +394,7 @@ export class DrawingOverlay {
                     action = createAction(DrawingMode.NUMBER_POINTER, {
                         start: this._startPoint,
                         end: [ix, iy],
-                        number: this._getNextNumber('number-pointer'),
+                        number: this._getNextNumber(NumberPointerAction),
                     }, options);
                 }
                 break;
@@ -685,12 +688,12 @@ export class DrawingOverlay {
                     break;
                 case DrawingMode.NUMBER_ARROW:
                     tempAction = createAction(DrawingMode.NUMBER_ARROW, {
-                        start: this._startPoint, end, number: this._numberCounters['number-arrow'],
+                        start: this._startPoint, end, number: this._getNextNumber(NumberArrowAction),
                     }, options);
                     break;
                 case DrawingMode.NUMBER_POINTER:
                     tempAction = createAction(DrawingMode.NUMBER_POINTER, {
-                        start: this._startPoint, end, number: this._numberCounters['number-pointer'],
+                        start: this._startPoint, end, number: this._getNextNumber(NumberPointerAction),
                     }, options);
                     break;
             }
@@ -777,7 +780,7 @@ export class DrawingOverlay {
     clear() {
         this._actions = [];
         this._undoStack = [];
-        this._numberCounters = { 'number': 1, 'number-arrow': 1, 'number-pointer': 1 };
+        // Number counters are dynamic — no reset needed
         this._cachedPixbuf = null;
         this._cachedBufScale = null;
         this._actor.queue_repaint();
