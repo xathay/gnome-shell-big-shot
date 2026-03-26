@@ -88,7 +88,7 @@ export class PartToolbar extends PartUI {
         // Drag handle — visible grippy area for dragging
         this._dragHandle = new St.Bin({
             child: new St.Icon({
-                icon_name: 'open-menu-symbolic',
+                icon_name: 'list-drag-handle-symbolic',
                 icon_size: 16,
                 style: 'color: rgba(255,255,255,0.5);',
             }),
@@ -502,7 +502,7 @@ export class PartToolbar extends PartUI {
 
         this._videoDragHandle = new St.Bin({
             child: new St.Icon({
-                icon_name: 'open-menu-symbolic',
+                icon_name: 'list-drag-handle-symbolic',
                 icon_size: 16,
                 style: 'color: rgba(255,255,255,0.5);',
             }),
