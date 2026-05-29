@@ -33,6 +33,7 @@ export const DrawingMode = Object.freeze({
     NUMBER_POINTER: 'NUMBER_POINTER',
     ERASER:         'ERASER',
     INVERT:         'INVERT',
+    ZOOM_CALLOUT:   'ZOOM_CALLOUT',
 });
 
 // =============================================================================
@@ -48,6 +49,7 @@ export class DrawingOptions {
         size = 3,
         font = 'Sans',
         intensity = 3,
+        liveVideo = false,
     } = {}) {
         this.mode = mode;
         this.primaryColor = primaryColor;
@@ -56,6 +58,7 @@ export class DrawingOptions {
         this.size = size;
         this.font = font;
         this.intensity = intensity;
+        this.liveVideo = liveVideo;
     }
 
     clone() {
@@ -67,6 +70,7 @@ export class DrawingOptions {
             size: this.size,
             font: this.font,
             intensity: this.intensity,
+            liveVideo: this.liveVideo,
         });
     }
 }
@@ -489,6 +493,11 @@ export class CensorAction extends RectAction {
             return;
         }
 
+        if (this.options?.liveVideo) {
+            this._drawOpaqueLiveMask(cr, toWidget);
+            return;
+        }
+
         // Fallback: checkerboard placeholder (shown during drag)
         let [x1, y1] = toWidget(...this.start);
         let [x2, y2] = toWidget(...this.end);
@@ -521,6 +530,42 @@ export class CensorAction extends RectAction {
                 cr.fill();
             }
         }
+        cr.restore();
+    }
+
+    _drawOpaqueLiveMask(cr, toWidget) {
+        let [x1, y1] = toWidget(...this.start);
+        let [x2, y2] = toWidget(...this.end);
+
+        const x = Math.min(x1, x2);
+        const y = Math.min(y1, y2);
+        const w = Math.abs(x2 - x1);
+        const h = Math.abs(y2 - y1);
+
+        if (w < 1 || h < 1) return;
+
+        cr.save();
+        cr.rectangle(x, y, w, h);
+        cr.clip();
+
+        const blockSize = this._blockSizeForIntensity(1);
+        const blocksX = Math.max(1, Math.ceil(w / blockSize));
+        const blocksY = Math.max(1, Math.ceil(h / blockSize));
+
+        for (let bx = 0; bx < blocksX; bx++) {
+            for (let by = 0; by < blocksY; by++) {
+                const shade = ((bx + by) % 2 === 0) ? 0.04 : 0.16;
+                cr.setSourceRGBA(shade, shade, shade, 1.0);
+                cr.rectangle(
+                    x + bx * blockSize,
+                    y + by * blockSize,
+                    blockSize,
+                    blockSize
+                );
+                cr.fill();
+            }
+        }
+
         cr.restore();
     }
 
@@ -725,6 +770,11 @@ export class BlurAction extends RectAction {
             return;
         }
 
+        if (this.options?.liveVideo) {
+            this._drawLiveBlurMask(cr, x, y, w, h, scale);
+            return;
+        }
+
         // Fallback: frosted/hatched overlay (shown during drag)
         cr.save();
         cr.rectangle(x, y, w, h);
@@ -737,6 +787,27 @@ export class BlurAction extends RectAction {
         cr.setSourceRGBA(1.0, 1.0, 1.0, 0.3);
         cr.setLineWidth(1.0);
         const spacing = 6 * scale;
+        const maxDim = w + h;
+        for (let d = -maxDim; d < maxDim; d += spacing) {
+            cr.moveTo(x + d, y);
+            cr.lineTo(x + d + h, y + h);
+        }
+        cr.stroke();
+        cr.restore();
+    }
+
+    _drawLiveBlurMask(cr, x, y, w, h, scale) {
+        cr.save();
+        cr.rectangle(x, y, w, h);
+        cr.clip();
+
+        cr.setSourceRGBA(0.78, 0.84, 0.9, 0.88);
+        cr.rectangle(x, y, w, h);
+        cr.fill();
+
+        cr.setSourceRGBA(1.0, 1.0, 1.0, 0.45);
+        cr.setLineWidth(1.2 * scale);
+        const spacing = Math.max(4, 6 * scale);
         const maxDim = w + h;
         for (let d = -maxDim; d < maxDim; d += spacing) {
             cr.moveTo(x + d, y);
@@ -939,12 +1010,11 @@ export class BlurAction extends RectAction {
 
 export class InvertAction extends RectAction {
     /**
-     * Preview draw — uses the cached inverted pixbuf for real preview,
-     * or falls back to a visual overlay during drag.
+     * Preview draw — uses the cached inverted Cairo surface for real preview
+     * (after the rectangle is committed), or falls back to a hatched overlay
+     * during drag.
      */
     draw(cr, toWidget, _scale) {
-        // Visual overlay during drag (cyan/magenta tint)
-        // Real inversion happens in drawReal() at save time.
         let [x1, y1] = toWidget(...this.start);
         let [x2, y2] = toWidget(...this.end);
 
@@ -955,14 +1025,36 @@ export class InvertAction extends RectAction {
 
         if (w < 1 || h < 1) return;
 
+        // Real inverted preview from cached surface
+        if (this._previewSurface) {
+            cr.save();
+            cr.rectangle(x, y, w, h);
+            cr.clip();
+            cr.translate(x, y);
+            cr.scale(w / this._previewW, h / this._previewH);
+            cr.setSourceSurface(this._previewSurface, 0, 0);
+            const pattern = cr.getSource();
+            // BILINEAR (4) — keeps the preview smooth when widget size differs
+            // from the cached surface size.
+            if (pattern.setFilter)
+                pattern.setFilter(4);
+            cr.paint();
+            cr.restore();
+            return;
+        }
+
+        if (this.options?.liveVideo) {
+            this._drawLiveInvertMask(cr, x, y, w, h);
+            return;
+        }
+
+        // Fallback: hatched overlay during drag (preview not ready yet).
         cr.save();
-        // Semi-transparent inverted-look overlay
         cr.rectangle(x, y, w, h);
         cr.setSourceRGBA(1.0, 1.0, 1.0, 0.5);
         cr.fillPreserve();
         cr.clip();
 
-        // Diagonal lines to indicate "invert" effect during drag
         cr.setSourceRGBA(0.0, 0.0, 0.0, 0.3);
         cr.setLineWidth(1.0);
         const spacing = 6;
@@ -973,6 +1065,90 @@ export class InvertAction extends RectAction {
         }
         cr.stroke();
         cr.restore();
+    }
+
+    _drawLiveInvertMask(cr, x, y, w, h) {
+        cr.save();
+        cr.rectangle(x, y, w, h);
+        cr.clip();
+
+        cr.setSourceRGBA(1.0, 1.0, 1.0, 0.82);
+        cr.rectangle(x, y, w, h);
+        cr.fill();
+
+        cr.setSourceRGBA(0.0, 0.0, 0.0, 0.35);
+        cr.setLineWidth(1.0);
+        const spacing = 5;
+        const maxDim = w + h;
+        for (let d = -maxDim; d < maxDim; d += spacing) {
+            cr.moveTo(x + d, y);
+            cr.lineTo(x + d + h, y + h);
+        }
+        cr.stroke();
+        cr.restore();
+    }
+
+    /**
+     * Generate real inverted-color preview from screenshot pixel data.
+     * Builds a Cairo ImageSurface by drawing inverted pixels via a Context
+     * (the GJS Cairo binding doesn't expose ImageSurface.getData(), so we
+     * can't write the byte buffer directly). For very large regions we cap
+     * the preview resolution and let bilinear filtering upscale at draw
+     * time — the saved result is always exact (drawReal at full resolution).
+     */
+    generatePreview(pixbuf, bufScale) {
+        const regionX = Math.min(this.start[0], this.end[0]);
+        const regionY = Math.min(this.start[1], this.end[1]);
+        const regionW = Math.abs(this.end[0] - this.start[0]);
+        const regionH = Math.abs(this.end[1] - this.start[1]);
+
+        const imgW = pixbuf.get_width();
+        const imgH = pixbuf.get_height();
+
+        const x = Math.round(Math.max(0, Math.min(regionX * bufScale, imgW - 1)));
+        const y = Math.round(Math.max(0, Math.min(regionY * bufScale, imgH - 1)));
+        const w = Math.round(Math.min(regionW * bufScale, imgW - x));
+        const h = Math.round(Math.min(regionH * bufScale, imgH - y));
+
+        if (w < 2 || h < 2) return;
+
+        // Cap at ~160k pixels (~400×400) to keep per-pixel Cairo fills cheap;
+        // bilinear filter at draw() upscales smoothly when the widget is bigger.
+        const MAX_PREVIEW_PIXELS = 160000;
+        let pw = w, ph = h;
+        if (w * h > MAX_PREVIEW_PIXELS) {
+            const factor = Math.sqrt((w * h) / MAX_PREVIEW_PIXELS);
+            pw = Math.max(2, Math.round(w / factor));
+            ph = Math.max(2, Math.round(h / factor));
+        }
+
+        const bytes = pixbuf.read_pixel_bytes();
+        const data = bytes.get_data();
+        const rowstride = pixbuf.get_rowstride();
+        const nChannels = pixbuf.get_n_channels();
+
+        const surface = new cairo.ImageSurface(cairo.Format.ARGB32, pw, ph);
+        const scr = new cairo.Context(surface);
+
+        for (let py = 0; py < ph; py++) {
+            const srcY = y + Math.min(h - 1, Math.floor(py * h / ph));
+            for (let px = 0; px < pw; px++) {
+                const srcX = x + Math.min(w - 1, Math.floor(px * w / pw));
+                const off = srcY * rowstride + srcX * nChannels;
+                const r = (255 - data[off]) / 255;
+                const g = (255 - data[off + 1]) / 255;
+                const b = (255 - data[off + 2]) / 255;
+                const a = nChannels === 4 ? data[off + 3] / 255 : 1.0;
+                scr.setSourceRGBA(r, g, b, a);
+                scr.rectangle(px, py, 1, 1);
+                scr.fill();
+            }
+        }
+
+        surface.flush();
+        this._previewSurface = surface;
+        this._previewW = pw;
+        this._previewH = ph;
     }
 
     /**
@@ -1264,6 +1440,201 @@ export class NumberPointerAction extends DrawingAction {
     }
 }
 
+// =============================================================================
+// ZOOM CALLOUT — crop a region, magnify it as an inset, link it with an arrow
+// Preview & export both go through draw(): the cropped pixels are captured once
+// into a Cairo surface by generatePreview(), then painted scaled into the inset.
+// =============================================================================
+
+export class ZoomCalloutAction extends DrawingAction {
+    constructor(srcStart, srcEnd, destPos, zoom, options) {
+        super();
+        this.options = options;
+
+        // Source rectangle, normalized to top-left / bottom-right (image coords)
+        this.srcStart = [Math.min(srcStart[0], srcEnd[0]), Math.min(srcStart[1], srcEnd[1])];
+        this.srcEnd = [Math.max(srcStart[0], srcEnd[0]), Math.max(srcStart[1], srcEnd[1])];
+
+        this.zoom = ZoomCalloutAction.clampZoom(zoom || 2);
+        this.destPos = destPos; // top-left of the magnified inset (image coords)
+
+        // Captured source pixels (filled by generatePreview); reused on every repaint
+        this._sourceSurface = null;
+        this._srcPixW = 0;
+        this._srcPixH = 0;
+    }
+
+    static clampZoom(z) {
+        return Math.max(1.5, Math.min(6, z));
+    }
+
+    get srcW() { return this.srcEnd[0] - this.srcStart[0]; }
+    get srcH() { return this.srcEnd[1] - this.srcStart[1]; }
+    get destW() { return this.srcW * this.zoom; }
+    get destH() { return this.srcH * this.zoom; }
+
+    setZoom(z) {
+        this.zoom = ZoomCalloutAction.clampZoom(z);
+    }
+
+    /**
+     * Capture the source region pixels into a standalone Cairo surface.
+     * Goes through a tiny temp PNG — the same pixbuf→surface bridge the
+     * export pipeline already relies on, so it works in every context.
+     */
+    generatePreview(pixbuf, bufScale) {
+        const imgW = pixbuf.get_width();
+        const imgH = pixbuf.get_height();
+
+        const sx = Math.round(Math.max(0, Math.min(this.srcStart[0] * bufScale, imgW - 1)));
+        const sy = Math.round(Math.max(0, Math.min(this.srcStart[1] * bufScale, imgH - 1)));
+        const sw = Math.round(Math.min(this.srcW * bufScale, imgW - sx));
+        const sh = Math.round(Math.min(this.srcH * bufScale, imgH - sy));
+        if (sw < 1 || sh < 1) return;
+
+        const tmpPath = GLib.build_filenamev([
+            GLib.get_tmp_dir(),
+            `big-shot-zoom-${GLib.get_monotonic_time()}.png`,
+        ]);
+
+        try {
+            const sub = pixbuf.new_subpixbuf(sx, sy, sw, sh).copy();
+            sub.savev(tmpPath, 'png', [], []);
+            this._sourceSurface = cairo.ImageSurface.createFromPNG(tmpPath);
+            this._srcPixW = sw;
+            this._srcPixH = sh;
+        } catch (err) {
+            console.error(`[Big Shot] Zoom callout capture failed: ${err.message}`);
+            this._sourceSurface = null;
+        } finally {
+            GLib.unlink(tmpPath);
+        }
+    }
+
+    draw(cr, toWidget, scale) {
+        const [dx0, dy0] = toWidget(this.destPos[0], this.destPos[1]);
+        const [dx1, dy1] = toWidget(this.destPos[0] + this.destW, this.destPos[1] + this.destH);
+        const dw = dx1 - dx0;
+        const dh = dy1 - dy0;
+
+        const [sx0, sy0] = toWidget(this.srcStart[0], this.srcStart[1]);
+        const [sx1, sy1] = toWidget(this.srcEnd[0], this.srcEnd[1]);
+
+        // 1. Connector from the source rectangle to the inset
+        this._drawConnector(cr, sx0, sy0, sx1, sy1, dx0, dy0, dw, dh, scale);
+
+        // 2. Thin outline around the source region (what's being magnified)
+        cr.save();
+        cr.setSourceRGBA(...this.options.primaryColor);
+        cr.setLineWidth(Math.max(1, this.options.size * 0.6 * scale));
+        cr.rectangle(sx0, sy0, sx1 - sx0, sy1 - sy0);
+        cr.stroke();
+        cr.restore();
+
+        // 3. The magnified image
+        if (this._sourceSurface && dw > 1 && dh > 1) {
+            cr.save();
+            cr.rectangle(dx0, dy0, dw, dh);
+            cr.clip();
+            cr.translate(dx0, dy0);
+            cr.scale(dw / this._srcPixW, dh / this._srcPixH);
+            cr.setSourceSurface(this._sourceSurface, 0, 0);
+            cr.paint();
+            cr.restore();
+        } else if (dw > 1 && dh > 1) {
+            // Surface not ready yet — neutral placeholder
+            cr.save();
+            cr.setSourceRGBA(0.15, 0.15, 0.15, 0.85);
+            cr.rectangle(dx0, dy0, dw, dh);
+            cr.fill();
+            cr.restore();
+        }
+
+        // 4. Inset frame (shadow + white border) on top of the image
+        const borderW = Math.max(2, this.options.size * 0.9 * scale);
+        cr.save();
+        const shadowOff = Math.max(1, Math.round(scale));
+        cr.setSourceRGBA(0, 0, 0, 0.35);
+        cr.setLineWidth(borderW);
+        cr.rectangle(dx0 + shadowOff, dy0 + shadowOff, dw, dh);
+        cr.stroke();
+        cr.setSourceRGBA(1, 1, 1, 1);
+        cr.setLineWidth(borderW);
+        cr.rectangle(dx0, dy0, dw, dh);
+        cr.stroke();
+        cr.restore();
+    }
+
+    /** Arrow from the source-rect border toward the inset border. */
+    _drawConnector(cr, sx0, sy0, sx1, sy1, dx0, dy0, dw, dh, scale) {
+        const scx = (sx0 + sx1) / 2;
+        const scy = (sy0 + sy1) / 2;
+        const dcx = dx0 + dw / 2;
+        const dcy = dy0 + dh / 2;
+
+        let dirX = dcx - scx;
+        let dirY = dcy - scy;
+        const len = Math.hypot(dirX, dirY);
+        if (len < 1) return;
+        dirX /= len;
+        dirY /= len;
+
+        const [bx, by] = this._exitPoint(scx, scy, (sx1 - sx0) / 2, (sy1 - sy0) / 2, dirX, dirY);
+        const [ex, ey] = this._exitPoint(dcx, dcy, dw / 2, dh / 2, -dirX, -dirY);
+
+        const width = Math.max(1.5, this.options.size * 1.2 * scale);
+        const angle = Math.atan2(ey - by, ex - bx);
+        const headSize = Math.max(6, this.options.size * 2.5 * scale);
+        const arrowAngle = Math.PI / 6;
+        const lx = ex + headSize * Math.cos(angle + Math.PI - arrowAngle);
+        const ly = ey + headSize * Math.sin(angle + Math.PI - arrowAngle);
+        const rx = ex + headSize * Math.cos(angle + Math.PI + arrowAngle);
+        const ry = ey + headSize * Math.sin(angle + Math.PI + arrowAngle);
+
+        cr.save();
+        cr.setLineWidth(width);
+        cr.setLineCap(1); // ROUND
+
+        // Shadow
+        const off = Math.max(1, Math.round(scale));
+        cr.setSourceRGBA(0, 0, 0, 0.4);
+        cr.moveTo(bx + off, by + off); cr.lineTo(ex + off, ey + off); cr.stroke();
+        cr.moveTo(ex + off, ey + off); cr.lineTo(lx + off, ly + off); cr.stroke();
+        cr.moveTo(ex + off, ey + off); cr.lineTo(rx + off, ry + off); cr.stroke();
+
+        // Arrow
+        cr.setSourceRGBA(...this.options.primaryColor);
+        cr.moveTo(bx, by); cr.lineTo(ex, ey); cr.stroke();
+        cr.moveTo(ex, ey); cr.lineTo(lx, ly); cr.stroke();
+        cr.moveTo(ex, ey); cr.lineTo(rx, ry); cr.stroke();
+        cr.restore();
+    }
+
+    /** Point where a ray from (cx,cy) in direction (dx,dy) exits a half-w/half-h box. */
+    _exitPoint(cx, cy, hw, hh, dx, dy) {
+        const tx = dx !== 0 ? hw / Math.abs(dx) : Infinity;
+        const ty = dy !== 0 ? hh / Math.abs(dy) : Infinity;
+        const t = Math.min(tx, ty);
+        return [cx + dx * t, cy + dy * t];
+    }
+
+    getBounds() {
+        const xs = [this.srcStart[0], this.srcEnd[0], this.destPos[0], this.destPos[0] + this.destW];
+        const ys = [this.srcStart[1], this.srcEnd[1], this.destPos[1], this.destPos[1] + this.destH];
+        return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+    }
+
+    // Only the inset is grabbable — dragging moves the magnified box, not the source.
+    containsPoint(x, y) {
+        return x >= this.destPos[0] && x <= this.destPos[0] + this.destW &&
+               y >= this.destPos[1] && y <= this.destPos[1] + this.destH;
+    }
+
+    translate(dx, dy) {
+        this.destPos = [this.destPos[0] + dx, this.destPos[1] + dy];
+    }
+}
+
 /** Distance from point (px,py) to line segment (ax,ay)-(bx,by) */
 function _pointToSegmentDist(px, py, ax, ay, bx, by) {
     const abx = bx - ax, aby = by - ay;
@@ -1302,6 +1673,8 @@ export function createAction(mode, data, options) {
             return new BlurAction(data.start, data.end, false, options);
         case DrawingMode.INVERT:
             return new InvertAction(data.start, data.end, false, options);
+        case DrawingMode.ZOOM_CALLOUT:
+            return new ZoomCalloutAction(data.start, data.end, data.destPos, data.zoom, options);
         case DrawingMode.NUMBER:
             return new NumberStampAction(data.position, data.number, options);
         case DrawingMode.NUMBER_ARROW:

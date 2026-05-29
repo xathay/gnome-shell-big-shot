@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.big-shot"
+          path="/org/gnome/shell/extensions/big-shot/">
+
+    <key name="scrolling-capture" type="as">
+      <default>['&lt;Super&gt;&lt;Shift&gt;r']</default>
+      <summary>Scrolling capture of the focused window</summary>
+      <description>
+        Keybinding to start a scroll-and-stitch capture of the currently
+        focused window. The whole window content is scrolled and the frames
+        are stitched into one tall PNG saved under ~/Imagens/BigShot/.
+      </description>
+    </key>
+
+    <key name="forensic-capture" type="as">
+      <default>['&lt;Super&gt;&lt;Shift&gt;w']</default>
+      <summary>Forensic web page capture</summary>
+      <description>
+        Keybinding that opens a modal prompting for a URL and then produces a
+        forensic evidence bundle (full-page PNG, MHTML, HAR, TLS chain, hashes,
+        optional RFC 3161 timestamp) via the Python helper at
+        /usr/lib/big-shot/forensic_capture.py.
+      </description>
+    </key>
+
+  </schema>
+</schemalist>
